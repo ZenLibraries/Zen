@@ -1,6 +1,7 @@
 
 #include "gtest/gtest.h"
 #include <cstddef>
+#include <iterator>
 
 #include "zen/iterator_adaptor.hpp"
 
@@ -10,6 +11,22 @@ class next_n_iter : public iterator_adaptor<next_n_iter, int> {
 public:
 
   std::ptrdiff_t value;
+
+  next_n_iter(const next_n_iter& other):
+    value(other.value) {}
+
+  next_n_iter(next_n_iter&& other):
+    value(std::move(other.value)) {}
+
+  next_n_iter& operator=(const next_n_iter& other) {
+    value = other.value;
+    return *this;
+  }
+
+  next_n_iter& operator=(next_n_iter&& other) {
+    value = std::move(other.value);
+    return *this;
+  }
 
   next_n_iter(std::ptrdiff_t value):
     value(value) {}
@@ -30,6 +47,10 @@ public:
   }
 
 };
+
+using next_n_iter_traits = std::iterator_traits<next_n_iter>;
+
+static_assert(std::is_same_v<next_n_iter_traits::value_type, int>);
 
 static_assert(has_next_n_v<next_n_iter>);
 

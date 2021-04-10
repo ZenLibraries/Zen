@@ -13,27 +13,6 @@ namespace zen {
   template<typename T>
   class zip_iterator;
 
-  // template<typename T, typename FnT>
-  // std::invoke_result_t<FnT, meta::element_t<T>> convert(const T& value, FnT op);
-
-#define ZEN_CONSTEXPR constexpr
-
-  template<typename FnT, std::size_t ...J, typename ...Ts>
-  ZEN_CONSTEXPR auto convert_impl(const std::tuple<Ts...>& value, std::integer_sequence<std::size_t, J...>, FnT&& op) {
-    return std::tuple<std::invoke_result_t<FnT, Ts>...> { op(std::get<J>(value))... };
-  }
-
-  template<typename FnT, typename ...Ts>
-  ZEN_CONSTEXPR auto convert(const std::tuple<Ts...>& value, FnT op) {
-    using seq = std::make_index_sequence<std::tuple_size_v<std::tuple<Ts...>>>;
-    return convert_impl(std::tuple<Ts...>(value), seq(), std::forward<FnT>(op));
-  }
-
-  template<typename T1, typename T2, typename FnT>
-  ZEN_CONSTEXPR auto convert(const std::pair<T1, T2>& value, FnT fn) {
-    return std::make_pair<T1, T2>(fn(value.first), fn(value.second));
-  }
-
   template<typename T>
   class zip_iterator : public iterator_adaptor<
       zip_iterator<T>,
@@ -50,6 +29,22 @@ namespace zen {
 
     zip_iterator(T iterators):
       iterators(iterators) {}
+
+    zip_iterator(const zip_iterator& other):
+      iterators(other.iterators) {}
+
+    zip_iterator(zip_iterator&& other):
+      iterators(std::move(other.iterators)) {}
+
+    zip_iterator& operator=(const zip_iterator& other) {
+      iterators = other.iterators;
+      return *this;
+    }
+
+    zip_iterator& operator=(zip_iterator&& other) {
+      iterators = std::move(other.iterators);
+      return *this;
+    }
 
     void increment() {
       for (auto& iter: iterators) {
@@ -74,9 +69,14 @@ namespace zen {
   };
 
   template<typename ...Ts>
-  auto zip(Ts...args) {
-    return zip_iterator<std::tuple<Ts...>>(std::tuple<Ts...>(args...));
-  }
+  struct zip_impl<
+    std::tuple<Ts...>
+  , std::enable_if_t<meta::andmap_v<meta::lift<meta::is_iterator>, std::tuple<Ts...>>>
+  > {
+    static auto apply(Ts&& ...args) {
+      return zip_iterator<std::tuple<Ts...>>(std::tuple<Ts...>(std::forward<Ts>(args)...));
+    }
+  };
 
 }
 

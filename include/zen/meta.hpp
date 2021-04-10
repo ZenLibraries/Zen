@@ -29,7 +29,7 @@ namespace zen {
 
     template<typename T>
     struct element {
-      using type = typename T::value_type;
+      using type = typename std::remove_reference_t<T>::value_type;
     };
 
     template<typename T>
@@ -70,6 +70,21 @@ namespace zen {
         >
       > : std::true_type { };
 
+    template <typename T, typename = void>
+    struct is_range : std::false_type { };
+
+    template <typename T>
+    struct is_range<T,
+        std::void_t<
+          decltype(std::declval<T&>().begin()),
+          decltype(std::declval<T&>().end()),
+          typename T::value_type
+        >
+      > : std::true_type { };
+
+    template<typename T>
+    constexpr const bool is_range_v = is_range<T>::value;
+
     template<std::size_t N, typename FnT, typename ...Ts>
     struct andmap_impl;
 
@@ -86,13 +101,13 @@ namespace zen {
     template<typename FnT, typename T>
     struct andmap;
 
-    template<typename FnT, typename T>
-    static constexpr const bool andmap_v = andmap<FnT, T>::value;
-
     template<typename FnT, typename ...Ts>
     struct andmap<FnT, std::tuple<Ts...>> {
       static constexpr const bool value = andmap_impl<std::tuple_size_v<std::tuple<Ts...>>, FnT, Ts...>::value;
     };
+
+    template<typename FnT, typename T>
+    constexpr const bool andmap_v = andmap<FnT, T>::value;
 
     template <typename T, typename = void>
     struct is_iterator : std::false_type { };

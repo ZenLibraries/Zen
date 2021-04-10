@@ -17,8 +17,31 @@ namespace zen {
   , typename ValueT
   , typename ReferenceT = std::add_lvalue_reference<ValueT>
   , typename DifferenceT = std::ptrdiff_t
+  , typename PointerT = ValueT*
   >
   class iterator_adaptor;
+
+  template<typename T, typename = void>
+  struct has_decrement : std::false_type {};
+
+  template<typename T>
+  struct has_decrement<T,
+      std::void_t< decltype(std::declval<T&>().decrement()) >
+    > : std::true_type {};
+
+  template<typename T>
+  constexpr const bool has_decrement_v = has_decrement<T>::value;
+
+  template<typename T, typename = void>
+  struct has_increment : std::false_type {};
+
+  template<typename T>
+  struct has_increment<T,
+      std::void_t< decltype(std::declval<T&>().increment()) >
+    > : std::true_type {};
+
+  template<typename T>
+  constexpr const bool has_increment_v = has_increment<T>::value;
 
   template<typename T, typename = void>
   struct has_next_n : std::false_type {};
@@ -59,15 +82,18 @@ namespace zen {
   , typename ValueT
   , typename ReferenceT
   , typename DifferenceT
+  , typename PointerT
   >
   class iterator_adaptor {
   public:
 
+    using iterator_category = std::random_access_iterator_tag;
     using value_type = ValueT;
-    using reference_type = ReferenceT;
+    using reference = ReferenceT;
     using difference_type = DifferenceT;
+    using pointer = PointerT;
 
-    reference_type operator*() {
+    reference operator*() {
       return static_cast<BaseT*>(this)->dereference();
     }
 
