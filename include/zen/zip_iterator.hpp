@@ -6,8 +6,12 @@
 #include <utility>
 
 #include "zen/meta.hpp"
+#include "zen/iterator_adaptor.hpp"
 
 namespace zen {
+
+  template<typename T>
+  class zip_iterator;
 
   // template<typename T, typename FnT>
   // std::invoke_result_t<FnT, meta::element_t<T>> convert(const T& value, FnT op);
@@ -31,13 +35,18 @@ namespace zen {
   }
 
   template<typename T>
-  class zip_iterator {
+  class zip_iterator : public iterator_adaptor<
+      zip_iterator<T>,
+      meta::map_t<T, meta::lift<meta::element>>,
+      meta::map_t<T, meta::lift<meta::element>>
+   > {
 
     T iterators;
 
-  public:
+    using ValueT = meta::map_t<T, meta::lift<meta::element>>;
+    using ReferenceT = ValueT;
 
-    using value_type = meta::map_t<T, meta::lift<meta::element>>;
+  public:
 
     zip_iterator(T iterators):
       iterators(iterators) {}
@@ -58,7 +67,7 @@ namespace zen {
       return convert(iterators, [&] (auto& iter) { return iter + offset; });
     }
 
-    value_type derefence() {
+    ReferenceT dereference() {
       return convert(iterators, [&] (const auto& iter) { return *iter; });
     }
 

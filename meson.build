@@ -17,6 +17,7 @@ zen_dep = declare_dependency(
 
 executable(
   'alltests',
+  'test/iterator_adaptor.cc',
   'test/zip_iterator.cc',
   'test/program_options.cc',
   include_directories: 'include',

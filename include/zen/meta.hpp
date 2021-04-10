@@ -1,8 +1,10 @@
 #ifndef ZEN_META_HPP
 #define ZEN_META_HPP
 
+#include <cstddef>
 #include <iterator>
 #include <tuple>
+#include <type_traits>
 
 namespace zen {
 
@@ -32,6 +34,29 @@ namespace zen {
 
     template<typename T>
     using element_t = typename element<T>::type;
+
+    template<typename T>
+    struct element_reference {
+      using type = typename T::reference_type;
+    };
+
+    template<typename T>
+    using element_reference_t = typename element_reference<T>::type;
+
+    /// Calculate the type that is used to represent the difference between two
+    /// instances of the given type.
+    template<typename T>
+    struct difference {
+      using type = typename std::remove_reference_t<T>::difference_type;
+    };
+
+    template<typename T>
+    using difference_t = typename difference<T>::type;
+
+    template<typename T>
+    struct difference<T*> {
+      using type = std::ptrdiff_t;
+    };
 
     template <typename T, typename = void>
     struct is_std_container : std::false_type { };

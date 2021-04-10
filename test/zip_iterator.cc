@@ -15,7 +15,7 @@ TEST(ZipIteratorTest, CanZipPairs) {
 
   auto zipper = zip(a.begin(), b.begin());
 
-  auto [x1, y1] = zipper.derefence();
+  auto [x1, y1] = *zipper;
   ASSERT_EQ(x1, 1);
   ASSERT_EQ(y1, 1.0);
 
