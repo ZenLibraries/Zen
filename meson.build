@@ -6,6 +6,8 @@ gtest_dep = gtest_proj.get_variable('gtest_main_dep')
 
 zen_lib = static_library(
   'zen',
+  'src/program_options.cc',
+  include_directories: 'include',
   cpp_args: [ '-std=c++17' ],
 )
 
