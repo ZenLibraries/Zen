@@ -19,7 +19,7 @@ namespace zen {
   std::any program::parse_value(flag_desc& flag, const std::string_view& str) {
     switch (flag.type) {
       case flag_type::boolean:
-        return str != "0" && str.size() == 0;
+        return str != "0" && str.size() != 0;
       case flag_type::string:
         return std::string(str);
       case flag_type::integer:

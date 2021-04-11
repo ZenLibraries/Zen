@@ -11,5 +11,6 @@ TEST(ProgramOptionsTest, CanParseBoolFlag) {
   command_one.add_bool_flag("bar", "Enable the 'bar' feature");
   auto parsed_1 = prog.parse_args({ "command-one", "--bar" });
   ASSERT_TRUE(parsed_1.find("bar") != parsed_1.end());
+  ASSERT_TRUE(std::any_cast<bool>(parsed_1["bar"]));
 }
 
