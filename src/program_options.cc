@@ -29,22 +29,25 @@ namespace zen {
     return right(result);
   }
 
-  parse_result<std::any> program::parse_value(flag_desc& flag, const std::string_view& str) {
-    switch (flag.type) {
+  parse_result<std::any> program::parse_value(flag_type type, const std::string_view& str) {
+    switch (type) {
+      case flag_type::ushort:
+        return parse_integral<unsigned short>(str);
+      case flag_type::uint:
+        return parse_integral<unsigned int>(str);
       case flag_type::ulong:
         return parse_integral<unsigned long>(str);
       case flag_type::boolean:
         return right(str.size() > 0 && str != "0");
       case flag_type::string:
         return right(std::string(str));
-      case flag_type::uint:
-        return parse_integral<unsigned int>(str);
     }
   }
 
   parse_result<parsed_args> program::parse_args(std::vector<std::string> args) {
 
     parsed_args result;
+    std::size_t pos_index = 0;
 
     std::vector<command_desc*> command_stack { &command };
 
@@ -91,13 +94,13 @@ namespace zen {
             }
           }
           value_str = args[i];
-          auto res = parse_value(flag, args[i]);
+          auto res = parse_value(flag.type, args[i]);
           ZEN_TRY(res);
           value = *res;
         } else {
           name = arg.substr(k, l);
           auto flag = find_flag(name, arg, command_stack);
-          auto res = parse_value(flag, arg.substr(l+1));
+          auto res = parse_value(flag.type, arg.substr(l+1));
           ZEN_TRY(res);
           value = *res;
         }
@@ -113,10 +116,18 @@ namespace zen {
         if (!command->subcommands.empty()) {
           auto subcommand_match = command->subcommands.find(arg);
           if (subcommand_match == command->subcommands.end()) {
-            throw std::runtime_error("command '" + arg + "' not found");
+            return left(make_cloned<command_not_found_error>(arg));
           }
           command_stack.push_back(subcommand_match->second);
         } else {
+          if (pos_index < command->pos_args.size()) {
+            auto desc = command->pos_args[pos_index++];
+            auto res = parse_value(desc->type, arg);
+            ZEN_TRY(res);
+            result.emplace(desc->name, *res);
+          } else {
+            return left(make_cloned<excess_arguments_error>(args, i));
+          }
           result.emplace("_", arg);
         }
 

@@ -12,10 +12,12 @@
   }
 
 #define ZEN_PANIC(message) \
-  fprintf(stderr, __FILE__ ":" ZEN_CAT2(__LINE__) ": " message);
+  fprintf(stderr, __FILE__ ":" ZEN_CAT2(__LINE__) ": " message "\n");
 
 #define ZEN_UNREACHABLE \
   ZEN_PANIC("Code that should have been unreachable was executed. This is a bug.");
+
+#define ZEN_AUTO_SIZE (-1)
 
 namespace zen {
 

@@ -27,8 +27,17 @@ namespace zen {
   enum class flag_type {
     boolean,
     string,
-    uint,
     ulong,
+    uint,
+    ushort,
+  };
+
+  struct arg_desc {
+    flag_type type;
+    std::string name;
+    std::optional<std::string> description;
+    int min_count = 1;
+    int max_count = 1;
   };
 
   struct flag_desc {
@@ -38,6 +47,29 @@ namespace zen {
     int min_count = 1;
     int max_count = 1;
     std::any default_value;
+  };
+
+  class arg_builder {
+
+    friend class program;
+
+    arg_desc& desc;
+
+  public:
+
+    inline arg_builder(arg_desc& desc):
+      desc(desc) {}
+
+    inline arg_builder& set_description(std::string new_description) {
+      desc.description = new_description;
+      return *this;
+    }
+
+    inline arg_builder& set_max_count(std::size_t new_max_count) {
+      desc.max_count = new_max_count;
+      return *this;
+    }
+
   };
 
   class flag_builder {
@@ -67,6 +99,7 @@ namespace zen {
     std::string name;
     std::optional<std::string> description;
     assoc_list<std::string, subcommand_desc*> subcommands;
+    std::vector<arg_desc*> pos_args;
     assoc_list<std::string, flag_desc*> flags;
   };
 
@@ -98,6 +131,14 @@ namespace zen {
       return *this;
     }
 
+    inline arg_builder add_string_arg(std::string name) {
+      auto arg = new arg_desc;
+      arg->type = flag_type::string;
+      arg->name = name;
+      desc.pos_args.push_back(arg);
+      return arg_builder(*arg);
+    }
+
     inline flag_builder add_bool_flag(std::string name) {
       auto flag = new flag_desc;
       flag->type = flag_type::boolean;
@@ -109,6 +150,13 @@ namespace zen {
     inline flag_builder add_ulong_flag(std::string name) {
       auto flag = new flag_desc;
       flag->type = flag_type::ulong;
+      desc.flags.push_back(name, flag);
+      return flag_builder(*flag);
+    }
+
+    inline flag_builder add_short_flag(std::string name) {
+      auto flag = new flag_desc;
+      flag->type = flag_type::ushort;
       desc.flags.push_back(name, flag);
       return flag_builder(*flag);
     }
@@ -136,6 +184,8 @@ namespace zen {
 
   };
 
+  using arg_list = std::vector<std::string>;
+
   class parse_error {
   public:
     virtual parse_error* clone() = 0;
@@ -156,7 +206,34 @@ namespace zen {
 
   };
 
-  using arg_list = std::vector<std::string>;
+  class command_not_found_error : public parse_error {
+  public:
+
+    std::string name;
+
+    command_not_found_error(std::string name):
+      name(name) {}
+
+    command_not_found_error* clone() {
+      return new command_not_found_error(name);
+    }
+
+  };
+
+  class excess_arguments_error : public parse_error {
+  public:
+
+    arg_list args;
+    std::size_t i;
+
+    excess_arguments_error(arg_list args, std::size_t i):
+      args(args), i(i) {}
+
+    excess_arguments_error* clone() {
+      return new excess_arguments_error(args, i);
+    }
+
+  };
 
   class parse_context {
   public:
@@ -172,7 +249,7 @@ namespace zen {
 
   class program : public command_builder {
 
-    parse_result<std::any> parse_value(flag_desc& flag, const std::string_view& str);
+    parse_result<std::any> parse_value(flag_type type, const std::string_view& str);
 
     flag_desc& find_flag(
       const std::string_view& name,
@@ -212,6 +289,9 @@ namespace zen {
     }
     for (auto& [name, command]: desc.subcommands) {
       delete command;
+    }
+    for (auto arg: desc.pos_args) {
+      delete arg;
     }
   }
 
