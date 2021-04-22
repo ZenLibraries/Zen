@@ -1,6 +1,7 @@
 #ifndef ZEN_ZIP_ITERATOR_HPP
 #define ZEN_ZIP_ITERATOR_HPP
 
+#include <algorithm>
 #include <cstdint>
 #include <type_traits>
 #include <utility>
@@ -22,10 +23,10 @@ namespace zen {
 
     T iterators;
 
-    using ValueT = meta::map_t<T, meta::lift<meta::element>>;
-    using ReferenceT = ValueT;
-
   public:
+
+    using value_type = meta::map_t<T, meta::lift<meta::element>>;
+    using reference = value_type;
 
     zip_iterator(T iterators):
       iterators(iterators) {}
@@ -46,6 +47,14 @@ namespace zen {
       return *this;
     }
 
+    bool operator==(const zip_iterator& other) const {
+      return std::get<0>(iterators) == std::get<0>(other.iterators);
+    }
+
+    bool operator!=(const zip_iterator& other) const {
+      return std::get<0>(iterators) != std::get<0>(other.iterators);
+    }
+
     void increment() {
       for (auto& iter: iterators) {
         ++iter;
@@ -62,7 +71,7 @@ namespace zen {
       return convert(iterators, [&] (auto& iter) { return iter + offset; });
     }
 
-    ReferenceT dereference() {
+    reference dereference() {
       return convert(iterators, [&] (const auto& iter) { return *iter; });
     }
 

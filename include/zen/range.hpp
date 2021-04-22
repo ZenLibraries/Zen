@@ -31,7 +31,7 @@ namespace zen {
     }
 
     IterT end() {
-      return end;
+      return right;
     }
 
   };
