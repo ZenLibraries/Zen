@@ -16,20 +16,33 @@ namespace zen {
     throw std::runtime_error("flag '" + std::string(arg) + "' not recognised");
   }
 
-  std::any program::parse_value(flag_desc& flag, const std::string_view& str) {
+  template<typename T>
+  static inline either<clone_ptr<parse_error>, T> parse_integral(std::string_view arg) {
+    T result = 0;
+    for (std::size_t i = 0; i < arg.size(); ++i) {
+      auto ch = arg[i];
+      if (!is_digit(ch)) {
+        return left(make_cloned<invalid_integer_error>(std::string(arg)));
+      }
+      result += std::pow(10, i) * parse_decimal(ch);
+    }
+    return right(result);
+  }
+
+  parse_result<std::any> program::parse_value(flag_desc& flag, const std::string_view& str) {
     switch (flag.type) {
+      case flag_type::ulong:
+        return parse_integral<unsigned long>(str);
       case flag_type::boolean:
-        return str != "0" && str.size() != 0;
+        return right(str.size() > 0 && str != "0");
       case flag_type::string:
-        return std::string(str);
-      case flag_type::integer:
-        return std::stoi(std::string(str));
-      case flag_type::decimal:
-        return std::stof(std::string(str));
+        return right(std::string(str));
+      case flag_type::uint:
+        return parse_integral<unsigned int>(str);
     }
   }
 
-  parsed_args program::parse_args(std::vector<std::string> args) {
+  parse_result<parsed_args> program::parse_args(std::vector<std::string> args) {
 
     parsed_args result;
 
@@ -78,11 +91,15 @@ namespace zen {
             }
           }
           value_str = args[i];
-          value = parse_value(flag, args[i]);
+          auto res = parse_value(flag, args[i]);
+          ZEN_TRY(res);
+          value = *res;
         } else {
           name = arg.substr(k, l);
           auto flag = find_flag(name, arg, command_stack);
-          value = parse_value(flag, arg.substr(l+1));
+          auto res = parse_value(flag, arg.substr(l+1));
+          ZEN_TRY(res);
+          value = *res;
         }
 
         result.emplace(name, value);
@@ -106,7 +123,7 @@ namespace zen {
       }
 
     }
-    return result;
+    return right(result);
   }
 
 }

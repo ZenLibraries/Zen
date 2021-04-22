@@ -1,12 +1,17 @@
 #ifndef ZEN_PROGRAM_OPTIONS_HPP
 #define ZEN_PROGRAM_OPTIONS_HPP
 
+#include <cmath>
 #include <optional>
 #include <any>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 
+#include "zen/char.hpp"
 #include "zen/assoc_list.hpp"
+#include "zen/clone_ptr.hpp"
+#include "zen/either.hpp"
 
 namespace zen {
 
@@ -22,8 +27,8 @@ namespace zen {
   enum class flag_type {
     boolean,
     string,
-    integer,
-    decimal,
+    uint,
+    ulong,
   };
 
   struct flag_desc {
@@ -32,6 +37,7 @@ namespace zen {
     std::optional<std::string> description;
     int min_count = 1;
     int max_count = 1;
+    std::any default_value;
   };
 
   class flag_builder {
@@ -42,12 +48,16 @@ namespace zen {
 
   public:
 
-
     inline flag_builder(flag_desc& desc):
       desc(desc) {}
 
     inline flag_builder& set_description(std::string new_description) {
       desc.description = new_description;
+      return *this;
+    }
+
+    inline flag_builder& set_default_value(std::any new_value) {
+      desc.default_value = new_value;
       return *this;
     }
 
@@ -96,6 +106,13 @@ namespace zen {
       return flag_builder(*flag);
     }
 
+    inline flag_builder add_ulong_flag(std::string name) {
+      auto flag = new flag_desc;
+      flag->type = flag_type::ulong;
+      desc.flags.push_back(name, flag);
+      return flag_builder(*flag);
+    }
+
     inline flag_builder add_bool_flag(std::string name, std::string description) {
       auto flag = new flag_desc;
       flag->type = flag_type::boolean;
@@ -119,11 +136,49 @@ namespace zen {
 
   };
 
+  class parse_error {
+  public:
+    virtual parse_error* clone() = 0;
+    virtual ~parse_error() = default;
+  };
+
+  class invalid_integer_error : public parse_error {
+  public:
+
+    std::string str;
+
+    invalid_integer_error(std::string str):
+      str(str) {}
+
+    parse_error* clone() {
+      return new invalid_integer_error(str);
+    }
+
+  };
+
+  using arg_list = std::vector<std::string>;
+
+  class parse_context {
+  public:
+    arg_list args;
+    arg_list::iterator curr_arg;
+  };
+
+  template<typename T, typename Enabler = void>
+  struct value_parser;
+
+  template<typename T>
+  using parse_result = either<clone_ptr<parse_error>, T>;
+
   class program : public command_builder {
 
-    std::any parse_value(flag_desc& flag, const std::string_view& str);
+    parse_result<std::any> parse_value(flag_desc& flag, const std::string_view& str);
 
-    flag_desc& find_flag(const std::string_view& name, const std::string_view& arg, std::vector<command_desc*>& command_stack);
+    flag_desc& find_flag(
+      const std::string_view& name,
+      const std::string_view& arg,
+      std::vector<command_desc*>& command_stack
+    );
 
     command_desc command;
 
@@ -140,7 +195,7 @@ namespace zen {
       command.description = description;
     }
 
-    parsed_args parse_args(std::vector<std::string> args);
+    parse_result<parsed_args> parse_args(std::vector<std::string> args);
 
   };
 
