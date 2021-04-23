@@ -74,6 +74,17 @@ namespace zen {
       return end;
     }
 
+    const_iterator find(const needle_type& key) const {
+      auto end = elements.end();
+      for (auto iter = elements.begin(); iter != end; ++iter) {
+        if (iter->first == key) {
+          return iter;
+        }
+      }
+      return end;
+    }
+
+
     bool contains(const needle_type& key) const {
       auto end = elements.end();
       for (auto iter = elements.begin(); iter != end; ++iter) {

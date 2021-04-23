@@ -37,7 +37,7 @@ namespace zen {
     virtual ~desc_base() = default;
   };
 
-  struct arg_desc : public desc_base {
+  struct pos_arg_desc : public desc_base {
     flag_type type;
     std::string name;
     std::optional<std::string> description;
@@ -54,26 +54,42 @@ namespace zen {
     std::any default_value;
   };
 
-  struct subcommands_desc : public desc_base {
+  struct args_desc_base : public desc_base {
+  };
+
+  struct subcommands_desc : public args_desc_base {
+
     assoc_list<std::string, subcommand_desc*> mapping;
+
+    subcommand_desc* get_subcommand(const std::string_view& name) const;
+
     ~subcommands_desc();
+  };
+
+  struct pos_args_desc : public args_desc_base {
+
+    std::vector<pos_arg_desc*> sequence;
+
+    void append_pos_arg(pos_arg_desc* desc) {
+      sequence.push_back(desc);
+    }
+
+    ~pos_args_desc();
   };
 
   struct command_desc : public desc_base {
 
+    std::size_t pos_arg_count = 0;
+    std::size_t subcommand_count = 0;
+
     std::string name;
     std::optional<std::string> description;
-    std::vector<desc_base*> pos_args;
+    args_desc_base* args = nullptr;
     subcommand_desc* default_subcommand = nullptr;
     assoc_list<std::string, flag_desc*> flags;
 
     bool has_subcommands() const {
-      for (auto arg: pos_args) {
-        if (dynamic_cast<subcommands_desc*>(arg)) {
-          return true;
-        }
-      }
-      return false;
+      return subcommand_count > 0;
     }
 
     ~command_desc();
@@ -86,19 +102,23 @@ namespace zen {
   using subcommand_callback = std::function<int(parsed_args)>;
 
   struct subcommand_desc : public command_desc {
-    subcommand_callback callback;
-  };
 
+    command_desc* parent = nullptr;
+    subcommand_callback callback;
+
+    std::vector<std::string_view> get_path() const;
+
+  };
 
   class arg_builder {
 
     friend class program;
 
-    arg_desc& desc;
+    pos_arg_desc& desc;
 
   public:
 
-    inline arg_builder(arg_desc& desc):
+    inline arg_builder(pos_arg_desc& desc):
       desc(desc) {}
 
     inline arg_builder& set_description(std::string new_description) {
@@ -136,6 +156,15 @@ namespace zen {
 
   };
 
+  inline std::size_t count_starting_chars(std::string_view str, char ch) {
+    for (auto i = 0; i < str.size(); ++i) {
+      if (str[i] != ch) {
+        return i;
+      }
+    }
+    return str.size();
+  }
+
   template<typename BaseT, typename DescT>
   class command_builder_base {
   protected:
@@ -144,18 +173,6 @@ namespace zen {
     friend class subcommand_builder;
 
     DescT& desc;
-    subcommands_desc* subcommands = nullptr;
-
-    subcommand_desc* get_subcommand(const std::string_view& name) {
-      if (subcommands == nullptr) {
-        return nullptr;
-      }
-      auto match = desc.subcommands.find(name);
-      if (match == desc.subcommands.end()) {
-        return nullptr;
-      }
-      return match->second;
-    }
 
   public:
 
@@ -174,14 +191,25 @@ namespace zen {
     BaseT& set_default_subcommand(subcommand_builder& subcommand);
 
     inline arg_builder add_string_arg(std::string name) {
-      auto arg = new arg_desc;
+      auto arg = new pos_arg_desc;
       arg->type = flag_type::string;
       arg->name = name;
-      desc.pos_args.push_back(arg);
+      pos_args_desc* pos_args;
+      if (desc.args == nullptr) {
+        desc.args = pos_args = new pos_args_desc;
+      } else {
+        pos_args = dynamic_cast<pos_args_desc*>(desc.args);
+        if (pos_args == nullptr) {
+          ZEN_PANIC("Trying to add a positional argument to a command which already contains subcommands");
+        }
+      }
+      pos_args->append_pos_arg(arg);
       return arg_builder(*arg);
     }
 
     inline flag_builder add_bool_flag(std::string name) {
+      std::size_t k = count_starting_chars(name, '-');
+      name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::boolean;
       flag->name = name;
@@ -190,20 +218,28 @@ namespace zen {
     }
 
     inline flag_builder add_ulong_flag(std::string name) {
+      std::size_t k = count_starting_chars(name, '-');
+      name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::ulong;
+      flag->name = name;
       desc.flags.push_back(name, flag);
       return flag_builder(*flag);
     }
 
-    inline flag_builder add_short_flag(std::string name) {
+    inline flag_builder add_ushort_flag(std::string name) {
+      std::size_t k = count_starting_chars(name, '-');
+      name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::ushort;
+      flag->name = name;
       desc.flags.push_back(name, flag);
       return flag_builder(*flag);
     }
 
     inline flag_builder add_bool_flag(std::string name, std::string description) {
+      std::size_t k = count_starting_chars(name, '-');
+      name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::boolean;
       flag->name = name;
@@ -241,11 +277,17 @@ namespace zen {
 
   template<typename BaseT, typename DescT>
   inline subcommand_builder command_builder_base<BaseT, DescT>::add_subcommand(std::string name) {
-    if (subcommands == nullptr) {
-      subcommands = new subcommands_desc;
-      desc.pos_args.push_back(subcommands);
+    subcommands_desc* subcommands;
+    if (desc.args == nullptr) {
+      desc.args = subcommands = new subcommands_desc;
+    } else {
+      subcommands = dynamic_cast<subcommands_desc*>(desc.args);
+      if (subcommands == nullptr) {
+        ZEN_PANIC("Trying to add a subcommand to a command that already contains positional arguments.");
+      }
     }
     auto subcommand = new subcommand_desc;
+    subcommand->parent = &desc;
     subcommand->name = name;
     subcommands->mapping.push_back(name, subcommand);
     return subcommand_builder { *subcommand };
@@ -379,6 +421,7 @@ namespace zen {
       }
 
     void print_help() const;
+    void print_help(const command_desc& desc) const;
 
     parse_result<parsed_args> parse_args(std::vector<std::string> args);
     parse_result<parsed_args> parse_args(int argc, const char* argv[]);
