@@ -16,12 +16,15 @@
 
 namespace zen {
 
+  class parse_error;
   class command_builder;
   class subcommand_builder;
   struct flag_desc;
   struct command_desc;
   struct subcommand_desc;
   class program;
+
+  void print_error(const parse_error& error, std::ostream& out = std::cerr);
 
   using parsed_args = std::unordered_map<std::string, std::any>;
 
@@ -102,12 +105,12 @@ namespace zen {
     std::string version;
   };
 
-  using subcommand_callback = std::function<int(parsed_args)>;
+  using subcommand_callback = std::function<int(const parsed_args&)>;
 
   struct subcommand_desc : public command_desc {
 
     command_desc* parent = nullptr;
-    subcommand_callback callback;
+    std::optional<subcommand_callback> callback;
 
     std::vector<std::string_view> get_path() const;
 
@@ -136,6 +139,18 @@ namespace zen {
 
   };
 
+  template<typename T, typename Enabler = void>
+  struct construct;
+
+  template<typename T>
+  struct construct<T, std::enable_if_t<std::is_fundamental_v<T>>> {
+    template<typename R>
+    static T apply(R value) {
+      return static_cast<T>(value);
+    }
+  };
+
+  template<typename T>
   class flag_builder {
 
     friend class program;
@@ -152,7 +167,7 @@ namespace zen {
       return *this;
     }
 
-    inline flag_builder& set_default_value(std::any new_value) {
+    inline flag_builder& set_default_value(T new_value) {
       desc.default_value = new_value;
       return *this;
     }
@@ -210,37 +225,37 @@ namespace zen {
       return arg_builder(*arg);
     }
 
-    inline flag_builder add_bool_flag(std::string name) {
+    inline auto add_bool_flag(std::string name) {
       std::size_t k = count_starting_chars(name, '-');
       name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::boolean;
       flag->name = name;
       desc.flags.push_back(name, flag);
-      return flag_builder(*flag);
+      return flag_builder<bool>(*flag);
     }
 
-    inline flag_builder add_ulong_flag(std::string name) {
+    inline auto add_ulong_flag(std::string name) {
       std::size_t k = count_starting_chars(name, '-');
       name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::ulong;
       flag->name = name;
       desc.flags.push_back(name, flag);
-      return flag_builder(*flag);
+      return flag_builder<unsigned long>(*flag);
     }
 
-    inline flag_builder add_ushort_flag(std::string name) {
+    inline auto add_ushort_flag(std::string name) {
       std::size_t k = count_starting_chars(name, '-');
       name = name.substr(k);
       auto flag = new flag_desc;
       flag->type = flag_type::ushort;
       flag->name = name;
       desc.flags.push_back(name, flag);
-      return flag_builder(*flag);
+      return flag_builder<unsigned short>(*flag);
     }
 
-    inline flag_builder add_bool_flag(std::string name, std::string description) {
+    inline auto add_bool_flag(std::string name, std::string description) {
       std::size_t k = count_starting_chars(name, '-');
       name = name.substr(k);
       auto flag = new flag_desc;
@@ -248,7 +263,7 @@ namespace zen {
       flag->name = name;
       flag->description = description;
       desc.flags.push_back(name, flag);
-      return flag_builder(*flag);
+      return flag_builder<bool>(*flag);
     }
 
     inline BaseT& add_help_flag();
@@ -301,7 +316,9 @@ namespace zen {
   using arg_list = std::vector<std::string>;
 
   class parse_error {
+    friend void print_error(const parse_error& error, std::ostream& out);
   public:
+    virtual void print(std::ostream& out) const = 0;
     virtual parse_error* clone() const = 0;
     virtual ~parse_error() = default;
   };
@@ -313,6 +330,8 @@ namespace zen {
 
     invalid_integer_error(std::string str):
       str(str) {}
+
+    void print(std::ostream& out) const override;
 
     parse_error* clone() const override {
       return new invalid_integer_error(str);
@@ -328,6 +347,8 @@ namespace zen {
     flag_required_error(flag_desc& desc):
       desc(desc) {}
 
+    void print(std::ostream& out) const override;
+
     flag_required_error* clone() const override {
       return new flag_required_error(desc);
     }
@@ -342,6 +363,8 @@ namespace zen {
     flag_not_found_error(std::string arg):
       arg(arg) {}
 
+    void print(std::ostream& out) const override;
+
     flag_not_found_error* clone() const override {
       return new flag_not_found_error(arg);
     }
@@ -355,6 +378,8 @@ namespace zen {
 
     command_not_found_error(std::string name):
       name(name) {}
+
+    void print(std::ostream& out) const override;
 
     command_not_found_error* clone() const override {
       return new command_not_found_error(name);
@@ -371,8 +396,27 @@ namespace zen {
     excess_arguments_error(arg_list args, std::size_t i):
       args(args), i(i) {}
 
+    void print(std::ostream& out) const override;
+
     excess_arguments_error* clone() const override {
       return new excess_arguments_error(args, i);
+    }
+
+  };
+
+  class missing_argument_error : public parse_error {
+  public:
+
+    arg_list args;
+    std::string name;
+
+    missing_argument_error(arg_list args, std::string name):
+      args(args), name(name) {}
+
+    void print(std::ostream& out) const override;
+
+    missing_argument_error* clone() const override {
+      return new missing_argument_error(args, name);
     }
 
   };
@@ -403,11 +447,11 @@ namespace zen {
 
     parse_result<void> validate_required(const command_desc& desc, parsed_args& result);
 
-    parse_result<parsed_args> parse_args_impl(
-      std::vector<std::string> args,
+    parse_result<void> parse_args_impl(
+      const std::vector<std::string>& args,
+      parsed_args& result,
       std::vector<command_desc*>& command_stack,
-      std::size_t i,
-      std::size_t& pos_index
+      std::size_t i
     );
 
   public:

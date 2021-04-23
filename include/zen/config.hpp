@@ -7,7 +7,7 @@
 #define ZEN_CAT2(arg) ZEN_CAT(arg)
 
 #define ZEN_ASSERT(test)                                                                      \
-  if (!test) {                                                                                \
+  if (!(test)) {                                                                                \
     ZEN_PANIC("An internal invariant failed to hold. See the stack trace for more details."); \
   }
 
