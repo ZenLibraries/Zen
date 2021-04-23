@@ -8,14 +8,14 @@ namespace zen {
 
   std::vector<std::string_view> subcommand_desc::get_path() const {
     std::vector<std::string_view> result;
-    const command_desc* curr = this->parent;
+    const command_desc* curr = this;
     while (curr != nullptr) {
-      result.push_back(curr->name);
       auto subcommand = dynamic_cast<const subcommand_desc*>(curr);
       if (subcommand == nullptr) {
         break;
       }
-      curr = subcommand;
+      result.push_back(curr->name);
+      curr = subcommand->parent;
     }
     return result;
   }
