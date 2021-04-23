@@ -45,10 +45,13 @@ namespace zen {
     int max_count = 1;
   };
 
+  using flag_callback = std::function<void(program&, std::any)>;
+
   struct flag_desc : public desc_base {
     flag_type type;
     std::string name;
     std::optional<std::string> description;
+    std::optional<flag_callback> callback;
     int min_count = 0;
     int max_count = 1;
     std::any default_value;
@@ -248,6 +251,8 @@ namespace zen {
       return flag_builder(*flag);
     }
 
+    inline BaseT& add_help_flag();
+
     bool has_subcommands() const {
       if (desc.subcommands == nullptr) {
         return false;
@@ -386,8 +391,6 @@ namespace zen {
 
   class program : public command_builder_base<program, program_desc> {
 
-    bool enable_help = true;
-
     parse_result<std::any> parse_value(flag_type type, const std::string_view& str);
 
     flag_desc* find_flag(
@@ -427,6 +430,22 @@ namespace zen {
     parse_result<parsed_args> parse_args(int argc, const char* argv[]);
 
   };
+
+
+  template<typename BaseT, typename DescT>
+  inline BaseT& command_builder_base<BaseT, DescT>::add_help_flag() {
+    auto flag = new flag_desc;
+    flag->type = flag_type::boolean;
+    flag->name = "help";
+    flag->description = "Print more infomation about this command";
+    flag->callback = [&] (program& prog, std::any value) {
+      prog.print_help(this->desc);
+      std::exit(1);
+    };
+    desc.flags.push_back("help", flag);
+    return *static_cast<BaseT*>(this);
+  }
+
 
 }
 

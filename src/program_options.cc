@@ -155,10 +155,9 @@ namespace zen {
         std::cerr << "\n";
       }
     }
-    std::cerr << "\n";
 
     if (subcommands != nullptr) {
-      std::cerr << "The following subcommands are available:\n\n";
+      std::cerr << "\nThe following subcommands are available:\n\n";
       std::size_t column1_width = 1;
       for (auto& [name, subcommand]: subcommands->mapping) {
         column1_width = std::max(column1_width, subcommand->name.size());
@@ -219,14 +218,6 @@ namespace zen {
       }
     }
 
-    if (args.empty()
-        && !command->has_subcommands()
-        && !command->default_subcommand
-        && enable_help) {
-      print_help();
-      std::exit(1);
-    }
-
     for (; i < args.size(); ++i) {
 
       auto arg = args[i];
@@ -254,6 +245,7 @@ namespace zen {
           break;
         }
 
+        flag_desc* flag;
         std::string_view name;
         std::string_view value_str;
         std::any value;
@@ -262,7 +254,7 @@ namespace zen {
 
         if (l == std::string::npos) {
           name = arg.substr(k);
-          auto flag = find_flag(name, arg, command_stack);
+          flag = find_flag(name, arg, command_stack);
           if (flag == nullptr) {
             return left(make_cloned<flag_not_found_error>(arg));
           }
@@ -278,7 +270,7 @@ namespace zen {
           value = *res;
         } else {
           name = arg.substr(k, l);
-          auto flag = find_flag(name, arg, command_stack);
+          flag = find_flag(name, arg, command_stack);
           if (flag == nullptr) {
             return left(make_cloned<flag_not_found_error>(arg));
           }
@@ -287,6 +279,9 @@ namespace zen {
           value = *res;
         }
 
+        if (flag->callback) {
+          (*flag->callback)(*this, value);
+        }
         result.emplace(name, value);
 
         continue;
@@ -327,7 +322,7 @@ namespace zen {
 
     command = command_stack.back();
 
-    if (command->has_subcommands()) {
+    if (command->has_subcommands() && result.size() == 0) {
       print_help(*command);
       std::exit(1);
     }
