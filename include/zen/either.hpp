@@ -213,6 +213,13 @@ namespace zen {
       return right_value;
     }
 
+    L unwrap_left() {
+      if (has_right_v) {
+        ZEN_PANIC("trying to unwrap the left side a zen::either which is right-valued");
+      }
+      return left_value;
+    }
+
     L &left() {
       ZEN_ASSERT(!has_right_v);
       return left_value;
@@ -248,6 +255,9 @@ namespace zen {
 
     inline either(left_t<L> data): left_value(data.value), has_left(true) {};
     inline either(right_t<void>): has_left(false) {};
+
+    template<typename L2>
+    inline either(left_t<L2> data): left_value(data.value), has_left(true) {};
 
     either(either&& other): has_left(other.has_left) {
       if (other.has_left) {

@@ -8,7 +8,7 @@ zen_lib = static_library(
   'zen',
   'src/program_options.cc',
   include_directories: 'include',
-  cpp_args: [ '-std=c++17' ],
+  cpp_args: [ '-std=c++17', '-fstandalone-debug' ],
 )
 
 zen_dep = declare_dependency(

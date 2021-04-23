@@ -55,7 +55,7 @@ namespace zen {
       cloner(cloner), ptr(ptr) {}
 
     clone_ptr(const clone_ptr& other):
-      cloner(other.cloner), ptr(clone(other.ptr)) {}
+      cloner(other.cloner), ptr(cloner(other.ptr)) {}
 
     clone_ptr(clone_ptr&& other):
       cloner(std::move(other.cloner)), ptr(std::move(other.ptr)) {
@@ -64,7 +64,7 @@ namespace zen {
 
     clone_ptr& operator=(const clone_ptr& other) {
       cloner = other.cloner;
-      ptr = clone(other.ptr);
+      ptr = cloner(other.ptr);
       return *this;
     }
 
@@ -77,7 +77,7 @@ namespace zen {
 
     template<typename T2, typename ClonerT2>
     clone_ptr(const clone_ptr<T2, ClonerT2>& other):
-      cloner(other.cloner), ptr(clone(other.ptr)) {}
+      cloner(other.cloner), ptr(cloner(other.ptr)) {}
 
     template<typename T2, typename ClonerT2>
     clone_ptr(clone_ptr<T2, ClonerT2>&& other):
@@ -88,7 +88,7 @@ namespace zen {
     template<typename T2, typename ClonerT2>
     clone_ptr& operator=(const clone_ptr<T2, ClonerT2>& other) {
       cloner = other.cloner;
-      ptr = clone(other.ptr);
+      ptr = cloner(other.ptr);
       return *this;
     }
 

@@ -102,11 +102,11 @@ namespace zen {
       return elements.end();
     }
 
-    iterator cbegin() {
+    const_iterator begin() const {
       return elements.cbegin();
     }
 
-    iterator cend() {
+    const_iterator end() const {
       return elements.cend();
     }
 
