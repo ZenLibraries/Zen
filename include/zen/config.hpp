@@ -20,9 +20,5 @@
 
 #define ZEN_AUTO_SIZE (-1)
 
-namespace zen {
-
-}
-
 #endif // of #ifndef ZEN_CONFIG_HPP
 

@@ -1,0 +1,3 @@
+option('zen_namespace', type: 'string', value: 'zen')
+option('zen_enable_assertions', type: 'boolean', value: true)
+option('zen_enable_tests', type: 'boolean', value: false)

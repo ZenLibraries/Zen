@@ -10,7 +10,7 @@ build/alltests: build/build.ninja $(ZEN_HEADERS) $(ZEN_SOURCES) $(ZEN_TEST_SOURC
 	ninja -C build alltests
 
 build/build.ninja: meson.build
-	meson build
+	meson build -Dzen_enable_tests=true -Dzen_enable_assertions=true
 
 .PHONY: debug
 debug: build/alltests

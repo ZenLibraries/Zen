@@ -9,84 +9,84 @@
 #include "zen/meta.hpp"
 #include "zen/iterator_adaptor.hpp"
 
-namespace zen {
+ZEN_NAMESPACE_START
 
-  template<typename T>
-  class zip_iterator;
+template<typename T>
+class zip_iterator;
 
-  template<typename T>
-  class zip_iterator : public iterator_adaptor<
-      zip_iterator<T>,
-      meta::map_t<T, meta::lift<meta::element>>,
-      meta::map_t<T, meta::lift<meta::element>>
-   > {
+template<typename T>
+class zip_iterator : public iterator_adaptor<
+    zip_iterator<T>,
+    meta::map_t<T, meta::lift<meta::element>>,
+    meta::map_t<T, meta::lift<meta::element>>
+ > {
 
-    T iterators;
+  T iterators;
 
-  public:
+public:
 
-    using value_type = meta::map_t<T, meta::lift<meta::element>>;
-    using reference = value_type;
+  using value_type = meta::map_t<T, meta::lift<meta::element>>;
+  using reference = value_type;
 
-    zip_iterator(T iterators):
-      iterators(iterators) {}
+  zip_iterator(T iterators):
+    iterators(iterators) {}
 
-    zip_iterator(const zip_iterator& other):
-      iterators(other.iterators) {}
+  zip_iterator(const zip_iterator& other):
+    iterators(other.iterators) {}
 
-    zip_iterator(zip_iterator&& other):
-      iterators(std::move(other.iterators)) {}
+  zip_iterator(zip_iterator&& other):
+    iterators(std::move(other.iterators)) {}
 
-    zip_iterator& operator=(const zip_iterator& other) {
-      iterators = other.iterators;
-      return *this;
+  zip_iterator& operator=(const zip_iterator& other) {
+    iterators = other.iterators;
+    return *this;
+  }
+
+  zip_iterator& operator=(zip_iterator&& other) {
+    iterators = std::move(other.iterators);
+    return *this;
+  }
+
+  bool operator==(const zip_iterator& other) const {
+    return std::get<0>(iterators) == std::get<0>(other.iterators);
+  }
+
+  bool operator!=(const zip_iterator& other) const {
+    return std::get<0>(iterators) != std::get<0>(other.iterators);
+  }
+
+  void increment() {
+    for (auto& iter: iterators) {
+      ++iter;
     }
+  }
 
-    zip_iterator& operator=(zip_iterator&& other) {
-      iterators = std::move(other.iterators);
-      return *this;
+  void decrement() {
+    for (auto& iter: iterators) {
+      --iter;
     }
+  }
 
-    bool operator==(const zip_iterator& other) const {
-      return std::get<0>(iterators) == std::get<0>(other.iterators);
-    }
+  zip_iterator next_n(std::ptrdiff_t offset) {
+    return convert(iterators, [&] (auto& iter) { return iter + offset; });
+  }
 
-    bool operator!=(const zip_iterator& other) const {
-      return std::get<0>(iterators) != std::get<0>(other.iterators);
-    }
+  reference dereference() {
+    return convert(iterators, [&] (const auto& iter) { return *iter; });
+  }
 
-    void increment() {
-      for (auto& iter: iterators) {
-        ++iter;
-      }
-    }
+};
 
-    void decrement() {
-      for (auto& iter: iterators) {
-        --iter;
-      }
-    }
+template<typename ...Ts>
+struct zip_impl<
+  std::tuple<Ts...>
+, std::enable_if_t<meta::andmap_v<meta::lift<meta::is_iterator>, std::tuple<Ts...>>>
+> {
+  static auto apply(Ts&& ...args) {
+    return zip_iterator<std::tuple<Ts...>>(std::tuple<Ts...>(std::forward<Ts>(args)...));
+  }
+};
 
-    zip_iterator next_n(std::ptrdiff_t offset) {
-      return convert(iterators, [&] (auto& iter) { return iter + offset; });
-    }
-
-    reference dereference() {
-      return convert(iterators, [&] (const auto& iter) { return *iter; });
-    }
-
-  };
-
-  template<typename ...Ts>
-  struct zip_impl<
-    std::tuple<Ts...>
-  , std::enable_if_t<meta::andmap_v<meta::lift<meta::is_iterator>, std::tuple<Ts...>>>
-  > {
-    static auto apply(Ts&& ...args) {
-      return zip_iterator<std::tuple<Ts...>>(std::tuple<Ts...>(std::forward<Ts>(args)...));
-    }
-  };
-
-}
+ZEN_NAMESPACE_END
 
 #endif // #ifndef ZEN_ZIP_ITERATOR_HPP
