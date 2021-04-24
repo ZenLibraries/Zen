@@ -13,11 +13,11 @@ TEST(ProgramOptionsTest, CanParseCommandWithBoolFlagAndPosArgs) {
   command_one.add_string_arg("two");
   command_one.add_string_arg("three");
   auto parsed_1 = prog.parse_args({ "command-one", "--bar", "1", "2", "3" }).unwrap();
-  ASSERT_TRUE(parsed_1.find("bar") != parsed_1.end());
-  ASSERT_TRUE(std::any_cast<bool>(parsed_1["bar"]));
-  ASSERT_EQ(std::any_cast<std::string>(parsed_1["one"]), "1");
-  ASSERT_EQ(std::any_cast<std::string>(parsed_1["two"]), "2");
-  ASSERT_EQ(std::any_cast<std::string>(parsed_1["three"]), "3");
+  ASSERT_TRUE(parsed_1.has_value("bar"));
+  ASSERT_EQ(*parsed_1.get_value<bool>("bar"), true);
+  ASSERT_EQ(parsed_1.get_value<std::string>("one"), "1");
+  ASSERT_EQ(parsed_1.get_value<std::string>("two"), "2");
+  ASSERT_EQ(parsed_1.get_value<std::string>("three"), "3");
 }
 
 TEST(ProgramOptionsTest, ErrorsWhenCommandNotFound) {

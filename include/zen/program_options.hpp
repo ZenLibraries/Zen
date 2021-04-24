@@ -26,7 +26,62 @@ namespace zen {
 
   void print_error(const parse_error& error, std::ostream& out = std::cerr);
 
-  using parsed_args = std::unordered_map<std::string, std::any>;
+  using arg_list = std::vector<std::string>;
+
+  class parse_result {
+
+    arg_list rest_args;
+
+    std::unordered_map<std::string, std::any> mapping;
+
+  public:
+
+    template<typename T>
+    const std::optional<T> get_value(const std::string& name) const {
+      auto match = mapping.find(name);
+      if (match == mapping.end()) {
+        return {};
+      }
+      return std::any_cast<T>(match->second);
+    }
+
+    template<typename T>
+    const T get_value(const std::string& name, T default_value) const {
+      auto match = mapping.find(name);
+      if (match == mapping.end()) {
+        return default_value;
+      }
+      return std::any_cast<T>(match->second);
+    }
+
+    void set_value(std::string name, std::any value) {
+      auto match = mapping.find(name);
+      if (match != mapping.end()) {
+        match->second = value;
+      } else {
+        mapping.emplace(name, value);
+      }
+    }
+
+    void append_value(std::string name, std::any value);
+
+    std::size_t count_values() const {
+      return mapping.size();
+    }
+
+    bool has_value(const std::string& name) const {
+      return mapping.count(name);
+    }
+
+    void set_rest_args(std::vector<std::string> args) {
+      rest_args = args;
+    }
+
+    const arg_list& get_rest_args() const {
+      return rest_args;
+    }
+
+  };
 
   enum class flag_type {
     boolean,
@@ -105,7 +160,7 @@ namespace zen {
     std::string version;
   };
 
-  using subcommand_callback = std::function<int(const parsed_args&)>;
+  using subcommand_callback = std::function<int(const parse_result&)>;
 
   struct subcommand_desc : public command_desc {
 
@@ -313,8 +368,6 @@ namespace zen {
     return subcommand_builder { *subcommand };
   }
 
-  using arg_list = std::vector<std::string>;
-
   class parse_error {
     friend void print_error(const parse_error& error, std::ostream& out);
   public:
@@ -431,11 +484,11 @@ namespace zen {
   struct value_parser;
 
   template<typename T>
-  using parse_result = either<clone_ptr<parse_error>, T>;
+  using result = either<clone_ptr<parse_error>, T>;
 
   class program : public command_builder_base<program, program_desc> {
 
-    parse_result<std::any> parse_value(flag_type type, const std::string_view& str);
+    result<std::any> parse_value(flag_type type, const std::string_view& str);
 
     flag_desc* find_flag(
       const std::string_view& name,
@@ -445,11 +498,11 @@ namespace zen {
 
     program_desc command;
 
-    parse_result<void> validate_required(const command_desc& desc, parsed_args& result);
+    result<void> validate_required(const command_desc& desc, parse_result& result);
 
-    parse_result<void> parse_args_impl(
+    result<void> parse_args_impl(
       const std::vector<std::string>& args,
-      parsed_args& result,
+      parse_result& result,
       std::vector<command_desc*>& command_stack,
       std::size_t i
     );
@@ -470,11 +523,10 @@ namespace zen {
     void print_help() const;
     void print_help(const command_desc& desc) const;
 
-    parse_result<parsed_args> parse_args(std::vector<std::string> args);
-    parse_result<parsed_args> parse_args(int argc, const char* argv[]);
+    result<parse_result> parse_args(std::vector<std::string> args);
+    result<parse_result> parse_args(int argc, const char* argv[]);
 
   };
-
 
   template<typename BaseT, typename DescT>
   inline BaseT& command_builder_base<BaseT, DescT>::add_help_flag() {
@@ -489,7 +541,6 @@ namespace zen {
     desc.flags.push_back("help", flag);
     return *static_cast<BaseT*>(this);
   }
-
 
 }
 

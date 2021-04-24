@@ -5,8 +5,52 @@
 #include <iostream>
 #include <ostream>
 #include <stdexcept>
+#include <typeindex>
 
 namespace zen {
+
+  struct flag_type_info {
+    std::function<std::any()> create_vector;
+    std::function<void(std::any&, std::any)> append_to_vector;
+  };
+
+
+#define ZEN_PO_INIT_FUNDAMENTAL_TYPE(type) \
+  { \
+    typeid(type), \
+    { \
+      [] () { return std::vector<type> {}; }, \
+      [] (auto& vector, auto value) { \
+        auto& v = std::any_cast<std::vector<type>&>(vector); \
+        v.push_back(std::any_cast<type>(value)); \
+      } \
+    } \
+  }
+
+  static std::unordered_map<std::type_index, flag_type_info> flag_types = {
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(bool),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned char),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned short),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned int),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned long),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned long long),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(float),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(double),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(long double),
+    ZEN_PO_INIT_FUNDAMENTAL_TYPE(std::string),
+  };
+
+  void parse_result::append_value(std::string name, std::any value) {
+    auto match = mapping.find(name);
+    auto handler = flag_types[value.type()];
+    if (match != mapping.end()) {
+      handler.append_to_vector(match->second, value);
+    } else {
+      auto vector = handler.create_vector();
+      handler.append_to_vector(vector, value);
+      mapping.emplace(name, vector);
+    }
+  }
 
   std::vector<std::string_view> subcommand_desc::get_path() const {
     std::vector<std::string_view> result;
@@ -78,7 +122,7 @@ namespace zen {
     return right(result);
   }
 
-  parse_result<std::any> program::parse_value(flag_type type, const std::string_view& str) {
+  result<std::any> program::parse_value(flag_type type, const std::string_view& str) {
     switch (type) {
       case flag_type::ushort:
         return parse_integral<unsigned short>(str);
@@ -181,9 +225,9 @@ namespace zen {
     print_help(desc);
   }
 
-  parse_result<void> program::validate_required(const command_desc& desc, parsed_args& result) {
+  result<void> program::validate_required(const command_desc& desc, parse_result& result) {
     for (auto& [name, flag]: desc.flags) {
-      if (!result.count(name) && flag->min_count > 0) {
+      if (!result.has_value(name) && flag->min_count > 0) {
         // TODO complete checks
         return left(make_cloned<flag_required_error>(*flag));
       }
@@ -198,49 +242,15 @@ namespace zen {
     return right();
   }
 
-  template<typename T>
-  void append_to_vector(std::any target, std::any value) {
-    auto& vector = std::any_cast<std::vector<T>&>(target);
-    vector.push_back(std::any_cast<T>(value));
-  }
-
-  void append_to_vector(std::any& target, std::any value) {
-    if (value.type() == typeid(unsigned long)) {
-      append_to_vector<unsigned long>(target, value);
-    }
-    if (value.type() == typeid(unsigned short)) {
-      append_to_vector<unsigned short>(target, value);
-    }
-    if (value.type() == typeid(std::string)) {
-      append_to_vector<std::string>(target, value);
-    }
-    ZEN_UNREACHABLE
-  }
-
-  std::any create_vector(flag_type type) {
-    switch (type) {
-      case flag_type::ulong:
-        return std::vector<unsigned long>();
-      case flag_type::uint:
-        return std::vector<unsigned int>();
-      case flag_type::ushort:
-        return std::vector<unsigned short>();
-      case flag_type::boolean:
-        return std::vector<bool>();
-      case flag_type::string:
-        return std::vector<std::string>();
-    }
-  }
-
-  template<typename ContainerT, typename KeyT, typename ValueT>
-  void replace(ContainerT& container, const KeyT& key, ValueT&& value) {
-    auto match = container.find(key);
-    if (match == container.end()) {
-      container.emplace(key, value);
-    } else {
-      match->second = std::move(value);
-    }
-  }
+  //template<typename ContainerT, typename KeyT, typename ValueT>
+  //void set_value(ContainerT& container, const KeyT& key, ValueT&& value) {
+  //  auto match = container.find(key);
+  //  if (match == container.end()) {
+  //    container.emplace(key, value);
+  //  } else {
+  //    match->second = std::move(value);
+  //  }
+  //}
 
   static inline bool starts_with(const std::string_view str, const std::string_view prefix, std::size_t start_offset) {
     for (auto i = start_offset; i < str.size(); ++i) {
@@ -254,9 +264,9 @@ namespace zen {
     return true;
   }
 
-  parse_result<void> program::parse_args_impl(
+  result<void> program::parse_args_impl(
     const std::vector<std::string>& args,
-    parsed_args& result,
+    parse_result& result,
     std::vector<command_desc*>& command_stack,
     std::size_t i
   ) {
@@ -267,7 +277,7 @@ namespace zen {
 
     for (auto& [name, flag]: command->flags) {
       if (flag->default_value.has_value()) {
-        result.emplace(name, flag->default_value);
+        result.set_value(name, flag->default_value);
       }
     }
 
@@ -307,7 +317,7 @@ namespace zen {
           for (std::size_t j = i; j < args.size(); j++) {
             rest_args.push_back(args[j]);
           }
-          result["__"] = rest_args;
+          result.set_rest_args(rest_args);
           break;
         }
         if (starts_with(arg, "no-", 2)) {
@@ -355,16 +365,9 @@ namespace zen {
           (*flag->callback)(*this, value);
         }
         if (flag->max_count > 1) {
-          auto match = result.find(std::string(name));
-          if (match != result.end()) {
-            append_to_vector(match->second, value);
-          } else {
-            auto vector = create_vector(flag->type);
-            append_to_vector(vector, value);
-            replace(result, std::string(name), vector);
-          }
+          result.append_value(std::string(name), value);
         } else {
-          replace(result, std::string(name), value);
+          result.set_value(std::string(name), value);
         }
 
         continue;
@@ -394,7 +397,7 @@ namespace zen {
           auto desc = ptr->sequence[pos_index];
           auto res = parse_value(desc->type, arg);
           ZEN_TRY(res);
-          replace(result, desc->name, *res);
+          result.set_value(desc->name, *res);
           ++pos_index;
           continue;
         }
@@ -405,7 +408,7 @@ namespace zen {
 
     }
 
-    if (command->has_subcommands() && result.size() == 0) {
+    if (command->has_subcommands() && args.empty()) {
       print_help(*command);
       std::exit(1);
     }
@@ -417,8 +420,8 @@ namespace zen {
     return right();
   }
 
-  parse_result<parsed_args> program::parse_args(std::vector<std::string> args) {
-    parsed_args result;
+  result<parse_result> program::parse_args(std::vector<std::string> args) {
+    parse_result result;
     std::vector<command_desc*> command_stack { &command };
     std::size_t i = 0;
     auto res = parse_args_impl(args, result, command_stack, i);
@@ -440,8 +443,8 @@ namespace zen {
     return right(result);
   }
 
-  parse_result<parsed_args> program::parse_args(int argc, const char* argv[]) {
-    std::vector<std::string> args { argv+1, argv + argc };
+  result<parse_result> program::parse_args(int argc, const char* argv[]) {
+    std::vector<std::string> args { argv + 1, argv + argc };
     return parse_args(args);
   }
 
