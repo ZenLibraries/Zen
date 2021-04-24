@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <functional>
+#include <typeindex>
 
 #include "zen/char.hpp"
 #include "zen/assoc_list.hpp"
@@ -83,36 +84,65 @@ namespace zen {
 
   };
 
-  enum class flag_type {
-    boolean,
-    string,
-    ulong,
-    uint,
-    ushort,
-  };
-
   struct desc_base {
     virtual ~desc_base() = default;
   };
 
   struct pos_arg_desc : public desc_base {
-    flag_type type;
+
+    std::type_index type;
     std::string name;
     std::optional<std::string> description;
-    int min_count = 1;
-    int max_count = 1;
+    int min_count;
+    int max_count;
+
+    pos_arg_desc(
+      std::type_index type,
+      std::string name,
+      std::optional<std::string> description = {},
+      int min_count = 1,
+      int max_count = 1
+    ): type(type),
+       name(name),
+       description(description),
+       min_count(min_count),
+       max_count(max_count) {}
+
   };
 
   using flag_callback = std::function<void(program&, std::any)>;
 
   struct flag_desc : public desc_base {
-    flag_type type;
+
+    std::type_index type;
     std::string name;
     std::optional<std::string> description;
     std::optional<flag_callback> callback;
     int min_count = 0;
     int max_count = 1;
+    bool fallthrough = false;
     std::any default_value;
+
+    flag_desc(
+      std::type_index type,
+      std::string name,
+      std::optional<std::string> description = {},
+      std::optional<flag_callback> callback = {},
+      int min_count = 0,
+      int max_count = 1,
+      bool fallthrough = false,
+      std::any default_value = {}
+    ): type(type),
+       name(name),
+       description(description),
+       callback(callback),
+       min_count(min_count),
+       max_count(min_count),
+       fallthrough(fallthrough),
+       default_value(default_value) {
+
+       }
+
   };
 
   struct args_desc_base : public desc_base {
@@ -263,10 +293,9 @@ namespace zen {
 
     BaseT& set_default_subcommand(subcommand_builder& subcommand);
 
-    inline arg_builder add_string_arg(std::string name) {
-      auto arg = new pos_arg_desc;
-      arg->type = flag_type::string;
-      arg->name = name;
+    template<typename T>
+    inline arg_builder add_pos_arg(std::string name) {
+      auto arg = new pos_arg_desc { typeid(T), name };
       pos_args_desc* pos_args;
       if (desc.args == nullptr) {
         desc.args = pos_args = new pos_args_desc;
@@ -280,45 +309,13 @@ namespace zen {
       return arg_builder(*arg);
     }
 
-    inline auto add_bool_flag(std::string name) {
+    template<typename T>
+    inline auto add_flag(std::string name, std::optional<std::string> description = {}) {
       std::size_t k = count_starting_chars(name, '-');
       name = name.substr(k);
-      auto flag = new flag_desc;
-      flag->type = flag_type::boolean;
-      flag->name = name;
+      auto flag = new flag_desc { typeid(T), name, description };
       desc.flags.push_back(name, flag);
-      return flag_builder<bool>(*flag);
-    }
-
-    inline auto add_ulong_flag(std::string name) {
-      std::size_t k = count_starting_chars(name, '-');
-      name = name.substr(k);
-      auto flag = new flag_desc;
-      flag->type = flag_type::ulong;
-      flag->name = name;
-      desc.flags.push_back(name, flag);
-      return flag_builder<unsigned long>(*flag);
-    }
-
-    inline auto add_ushort_flag(std::string name) {
-      std::size_t k = count_starting_chars(name, '-');
-      name = name.substr(k);
-      auto flag = new flag_desc;
-      flag->type = flag_type::ushort;
-      flag->name = name;
-      desc.flags.push_back(name, flag);
-      return flag_builder<unsigned short>(*flag);
-    }
-
-    inline auto add_bool_flag(std::string name, std::string description) {
-      std::size_t k = count_starting_chars(name, '-');
-      name = name.substr(k);
-      auto flag = new flag_desc;
-      flag->type = flag_type::boolean;
-      flag->name = name;
-      flag->description = description;
-      desc.flags.push_back(name, flag);
-      return flag_builder<bool>(*flag);
+      return flag_builder<T>(*flag);
     }
 
     inline BaseT& add_help_flag();
@@ -388,6 +385,22 @@ namespace zen {
 
     parse_error* clone() const override {
       return new invalid_integer_error(str);
+    }
+
+  };
+
+  class invalid_bool_error : public parse_error {
+  public:
+
+    std::string str;
+
+    invalid_bool_error(std::string str):
+      str(str) {};
+
+    void print(std::ostream& out) const override;
+
+    invalid_bool_error* clone() const override {
+      return new invalid_bool_error(str);
     }
 
   };
@@ -488,7 +501,7 @@ namespace zen {
 
   class program : public command_builder_base<program, program_desc> {
 
-    result<std::any> parse_value(flag_type type, const std::string_view& str);
+    result<std::any> parse_value(const std::type_index& type, const std::string_view& str);
 
     flag_desc* find_flag(
       const std::string_view& name,
@@ -530,9 +543,7 @@ namespace zen {
 
   template<typename BaseT, typename DescT>
   inline BaseT& command_builder_base<BaseT, DescT>::add_help_flag() {
-    auto flag = new flag_desc;
-    flag->type = flag_type::boolean;
-    flag->name = "help";
+    auto flag = new flag_desc { typeid(bool), "help" };
     flag->description = "Print more infomation about this command";
     flag->callback = [&] (program& prog, std::any value) {
       prog.print_help(this->desc);

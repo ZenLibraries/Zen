@@ -9,11 +9,10 @@
 
 namespace zen {
 
-  struct flag_type_info {
+  struct any_vector_info {
     std::function<std::any()> create_vector;
     std::function<void(std::any&, std::any)> append_to_vector;
   };
-
 
 #define ZEN_PO_INIT_FUNDAMENTAL_TYPE(type) \
   { \
@@ -27,7 +26,7 @@ namespace zen {
     } \
   }
 
-  static std::unordered_map<std::type_index, flag_type_info> flag_types = {
+  static std::unordered_map<std::type_index, any_vector_info> any_vector_types = {
     ZEN_PO_INIT_FUNDAMENTAL_TYPE(bool),
     ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned char),
     ZEN_PO_INIT_FUNDAMENTAL_TYPE(unsigned short),
@@ -40,9 +39,46 @@ namespace zen {
     ZEN_PO_INIT_FUNDAMENTAL_TYPE(std::string),
   };
 
+  template<typename T>
+  static result<std::any> parse_integral(std::string_view arg) {
+    T result = 0;
+    for (std::size_t i = 0; i < arg.size(); ++i) {
+      auto ch = arg[i];
+      if (!is_digit(ch)) {
+        return left(make_cloned<invalid_integer_error>(std::string(arg)));
+      }
+      result += std::pow(10, i) * parse_decimal(ch);
+    }
+    return right(result);
+  }
+
+  static result<std::any> parse_bool_value(const std::string_view& str) {
+    if (str == "1" || str == "on" || str == "true") {
+      return right(true);
+    }
+    if (str == "0" || str == "off" || str == "false") {
+      return right(false);
+    }
+    return left(make_cloned<invalid_bool_error>(std::string(str)));
+  }
+
+  static result<std::any> parse_string(const std::string_view& str) {
+    return right(std::string(str));
+  }
+
+  static std::unordered_map<std::type_index, std::function<result<std::any>(const std::string_view&)>> value_parsers = {
+    { typeid(bool), parse_bool_value },
+    { typeid(unsigned char), parse_integral<unsigned char> },
+    { typeid(unsigned short), parse_integral<unsigned char> },
+    { typeid(unsigned int), parse_integral<unsigned int> },
+    { typeid(unsigned long), parse_integral<unsigned long> },
+    { typeid(unsigned long long), parse_integral<unsigned long long> },
+    { typeid(std::string), parse_string },
+  };
+
   void parse_result::append_value(std::string name, std::any value) {
     auto match = mapping.find(name);
-    auto handler = flag_types[value.type()];
+    auto handler = any_vector_types[value.type()];
     if (match != mapping.end()) {
       handler.append_to_vector(match->second, value);
     } else {
@@ -109,32 +145,9 @@ namespace zen {
     return nullptr;
   }
 
-  template<typename T>
-  static inline either<clone_ptr<parse_error>, T> parse_integral(std::string_view arg) {
-    T result = 0;
-    for (std::size_t i = 0; i < arg.size(); ++i) {
-      auto ch = arg[i];
-      if (!is_digit(ch)) {
-        return left(make_cloned<invalid_integer_error>(std::string(arg)));
-      }
-      result += std::pow(10, i) * parse_decimal(ch);
-    }
-    return right(result);
-  }
-
-  result<std::any> program::parse_value(flag_type type, const std::string_view& str) {
-    switch (type) {
-      case flag_type::ushort:
-        return parse_integral<unsigned short>(str);
-      case flag_type::uint:
-        return parse_integral<unsigned int>(str);
-      case flag_type::ulong:
-        return parse_integral<unsigned long>(str);
-      case flag_type::boolean:
-        return right(str.size() > 0 && str != "0");
-      case flag_type::string:
-        return right(std::string(str));
-    }
+  result<std::any> program::parse_value(const std::type_index& type, const std::string_view& str) {
+    auto handle = value_parsers[type];
+    return handle(str);
   }
 
   static inline void write_repeat(std::ostream& out, std::string str, std::size_t count) {
@@ -338,7 +351,7 @@ namespace zen {
           if (flag == nullptr) {
             return left(make_cloned<flag_not_found_error>(arg));
           }
-          if (flag->type == flag_type::boolean) {
+          if (flag->type == typeid(bool)) {
             value = true;
           } else {
             ++i;
@@ -450,6 +463,10 @@ namespace zen {
 
   void print_error(const parse_error& error, std::ostream& out) {
     error.print(out);
+  }
+
+  void invalid_bool_error::print(std::ostream& out) const {
+    out << "error: could not parse '" << str << "' as a valid boolean (one of 'true', 'false', 'on', 'off', '1' or '0')\n";
   }
 
   void invalid_integer_error::print(std::ostream& out) const {
