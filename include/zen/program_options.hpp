@@ -93,15 +93,15 @@ struct pos_arg_desc : public desc_base {
   std::type_index type;
   std::string name;
   std::optional<std::string> description;
-  int min_count;
-  int max_count;
+  unsigned int min_count;
+  unsigned int max_count;
 
   pos_arg_desc(
     std::type_index type,
     std::string name,
     std::optional<std::string> description = {},
-    int min_count = 1,
-    int max_count = 1
+    unsigned int min_count = 1,
+    unsigned int max_count = 1
   ): type(type),
      name(name),
      description(description),
@@ -118,8 +118,8 @@ struct flag_desc : public desc_base {
   std::string name;
   std::optional<std::string> description;
   std::optional<flag_callback> callback;
-  int min_count = 0;
-  int max_count = 1;
+  unsigned int min_count = 0;
+  unsigned int max_count = 1;
   bool fallthrough = false;
   std::any default_value;
 
@@ -128,8 +128,8 @@ struct flag_desc : public desc_base {
     std::string name,
     std::optional<std::string> description = {},
     std::optional<flag_callback> callback = {},
-    int min_count = 0,
-    int max_count = 1,
+    unsigned int min_count = 0,
+    unsigned int max_count = 1,
     bool fallthrough = false,
     std::any default_value = {}
   ): type(type),

@@ -408,9 +408,13 @@ result<void> program::parse_args_impl(
           return left(make_cloned<excess_arguments_error>(args, i));
         }
         auto desc = ptr->sequence[pos_index];
-        auto res = parse_value(desc->type, arg);
-        ZEN_TRY(res);
-        result.set_value(desc->name, *res);
+        auto parsed = parse_value(desc->type, arg);
+        ZEN_TRY(parsed);
+        if (desc->max_count > 1) {
+          result.append_value(desc->name, *parsed);
+        } else {
+          result.set_value(desc->name, *parsed);
+        }
         ++pos_index;
         continue;
       }

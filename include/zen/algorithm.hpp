@@ -67,6 +67,13 @@ auto zip(Ts&&...args) {
   return zip_impl<std::tuple<Ts...>>::apply(std::forward<Ts>(args)...);
 }
 
+template<typename RangeT, typename FnT, typename OutIterT>
+void transform(const RangeT& range, FnT func, OutIterT iter) {
+  for (auto& element: range) {
+    iter = func(element);
+  }
+}
+
 ZEN_NAMESPACE_END
 
 #endif // of #ifndef ZEN_ALGORITHM_HPP
