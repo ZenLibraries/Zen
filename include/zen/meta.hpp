@@ -5,6 +5,7 @@
 #include <iterator>
 #include <tuple>
 #include <type_traits>
+#include <memory>
 
 ZEN_NAMESPACE_START
 
@@ -116,6 +117,59 @@ namespace meta {
   struct is_iterator<T,
       std::void_t< typename std::iterator_traits<T>::value_type >
     > : std::true_type { };
+
+
+  template<typename T>
+  struct is_pointer : std::false_type {};
+
+  template<typename T>
+  struct is_pointer<T*> : std::true_type {};
+
+  template<typename T>
+  struct is_pointer<std::shared_ptr<T>> : std::true_type {};
+
+  template<typename T>
+  struct is_pointer<std::unique_ptr<T>> : std::true_type {};
+
+  template<typename T>
+  static constexpr const bool is_pointer_v = is_pointer<T>::value;
+
+  template<typename T>
+  struct pointer_element;
+
+  template<typename T>
+  struct pointer_element<T*> {
+    using type = T;
+  };
+
+  template<typename T>
+  struct pointer_element<std::shared_ptr<T>> {
+    using type = T;
+  };
+
+  template<typename T>
+  struct pointer_element<std::unique_ptr<T>> {
+    using type = T;
+  };
+
+  template<typename T>
+  using pointer_element_t = typename pointer_element<T>::type;
+
+  template<typename T, typename = void>
+  struct is_container : std::false_type {};
+
+  template<typename T>
+  struct is_container<T,
+      std::void_t<
+        decltype(std::declval<T&>().begin()),
+        decltype(std::declval<T&>().end()),
+        typename T::value_type,
+        typename T::iterator
+        >
+      > : std::true_type { };
+
+  template<typename T>
+  static constexpr const bool is_container_v = is_container<T>::value;
 
 }
 

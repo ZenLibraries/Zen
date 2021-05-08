@@ -5,6 +5,13 @@ debug = get_option('debug')
 zen_enable_tests = get_option('zen_enable_tests')
 zen_enable_assertions = get_option('zen_enable_assertions')
 
+cmake = import('cmake')
+
+msgpack_opts = cmake.subproject_options()
+msgpack_opts.add_cmake_defines({ 'MSGPACK_ENABLE_STATIC': true })
+msgpack_proj = cmake.subproject('msgpack', options: msgpack_opts)
+msgpack_dep = msgpack_proj.dependency('msgpackc')
+
 if zen_enable_tests
   gtest_proj = subproject('gtest')
   gtest_dep = gtest_proj.get_variable('gtest_main_dep')
@@ -39,6 +46,7 @@ endif
 zen_lib = static_library(
   'zen',
   'src/program_options.cc',
+  'src/json_encoder.cc',
   include_directories: 'include',
   cpp_args: zen_compile_args,
 )
@@ -46,6 +54,7 @@ zen_lib = static_library(
 zen_dep = declare_dependency(
   include_directories: 'include',
   compile_args: zen_compile_args,
+  dependencies: [ msgpack_dep ],
   link_with: [ zen_lib ],
 )
 
@@ -55,6 +64,7 @@ if zen_enable_tests
     'test/iterator_adaptor.cc',
     'test/zip_iterator.cc',
     'test/program_options.cc',
+    'test/json_encoder.cc',
     include_directories: 'include',
     dependencies: [ gtest_dep, zen_dep ],
     build_by_default: false

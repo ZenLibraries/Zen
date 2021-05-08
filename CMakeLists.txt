@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.0)
 
 project(Zen CXX)
 
+# add_subdirectory(subprojects/msgpack-3.3.0 EXCLUDE_FROM_ALL)
+
 set(CMAKE_CXX_STANDARD 17)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
@@ -36,6 +38,7 @@ endif()
 
 set(zen_sources
   src/program_options.cc
+  src/json.cc
 )
 
 add_library(
