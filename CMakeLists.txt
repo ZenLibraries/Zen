@@ -38,7 +38,7 @@ endif()
 
 set(zen_sources
   src/program_options.cc
-  src/json.cc
+  src/json_encoder.cc
 )
 
 add_library(
