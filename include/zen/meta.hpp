@@ -29,20 +29,20 @@ namespace meta {
   };
 
   template<typename T>
-  struct element {
+  struct get_element {
     using type = typename std::remove_reference_t<T>::value_type;
   };
 
   template<typename T>
-  using element_t = typename element<T>::type;
+  using get_element_t = typename get_element<T>::type;
 
   template<typename T>
-  struct element_reference {
+  struct get_element_reference {
     using type = typename T::reference_type;
   };
 
   template<typename T>
-  using element_reference_t = typename element_reference<T>::type;
+  using get_element_reference_t = typename get_element_reference<T>::type;
 
   /// Calculate the type that is used to represent the difference between two
   /// instances of the given type.

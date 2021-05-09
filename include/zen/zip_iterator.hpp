@@ -17,15 +17,15 @@ class zip_iterator;
 template<typename T>
 class zip_iterator : public iterator_adaptor<
     zip_iterator<T>,
-    meta::map_t<T, meta::lift<meta::element>>,
-    meta::map_t<T, meta::lift<meta::element>>
+    meta::map_t<T, meta::lift<meta::get_element>>,
+    meta::map_t<T, meta::lift<meta::get_element>>
  > {
 
   T iterators;
 
 public:
 
-  using value_type = meta::map_t<T, meta::lift<meta::element>>;
+  using value_type = meta::map_t<T, meta::lift<meta::get_element>>;
   using reference = value_type;
 
   zip_iterator(T iterators):

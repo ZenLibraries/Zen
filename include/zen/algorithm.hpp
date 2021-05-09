@@ -2,7 +2,6 @@
 #define ZEN_ALGORITHM_HPP
 
 #include "zen/meta.hpp"
-#include <iostream>
 
 ZEN_NAMESPACE_START
 
@@ -72,6 +71,21 @@ void transform(const RangeT& range, FnT func, OutIterT iter) {
   for (auto& element: range) {
     iter = func(element);
   }
+}
+
+template<typename RangeT>
+typename meta::get_element_t<RangeT> last(RangeT range) {
+  auto prev = range.begin();
+  auto curr = prev;
+  auto end = range.end();
+  for (;;) {
+    curr++;
+    if (curr == end) {
+      break;
+    }
+    prev = curr;
+  }
+  return *prev;
 }
 
 ZEN_NAMESPACE_END
