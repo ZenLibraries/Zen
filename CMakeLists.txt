@@ -1,21 +1,19 @@
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 
 project(Zen CXX)
-
-# add_subdirectory(subprojects/msgpack-3.3.0 EXCLUDE_FROM_ALL)
 
 set(CMAKE_CXX_STANDARD 17)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-  set(ZEN_IS_DEBUG_BUILD ON)
+  set(is_debug_build ON)
 else()
-  set(ZEN_IS_DEBUG_BUILD OFF)
+  set(is_debug_build OFF)
 endif()
 
 set(ZEN_NAMESPACE "zen" CACHE STRING "The namespace in which to embed Zen++")
-option(ZEN_ENABLE_TESTS "Whether to generate the test infrastructure" "${ZEN_IS_DEBUG_BUILD}")
-option(ZEN_ENABLE_ASSERTIONS "Force the compiler to generate assertions for certain invariants" "${ZEN_IS_DEBUG_BUILD}")
+set(ZEN_ENABLE_TESTS "${is_debug_build}" CACHE BOOL "Whether to generate the test infrastructure")
+set(ZEN_ENABLE_ASSERTIONS "${is_debug_build}" CACHE BOOL "Force the compiler to generate assertions for certain invariants")
 
 string(REPLACE "::" ";" zen_namespace_chunks "${ZEN_NAMESPACE}")
 
@@ -38,7 +36,7 @@ endif()
 
 set(zen_sources
   src/program_options.cc
-  src/json_encoder.cc
+  src/json.cc
 )
 
 add_library(
@@ -69,7 +67,14 @@ install(TARGETS zen EXPORT Zen)
 install(EXPORT Zen NAMESPACE "${ZEN_NAMESPACE}::" DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Zen")
 
 if (ZEN_ENABLE_TESTS)
-  add_executable(alltests test/zip_iterator.cc test/iterator_adaptor.cc test/program_options.cc)
+  add_executable(
+    alltests
+    test/zip_iterator.cc
+    test/iterator_adaptor.cc
+    test/program_options.cc
+    test/meta.cc
+    test/bytestring.cc
+  )
   target_link_libraries(alltests zen gtest gtest_main)
   add_custom_target(check COMMAND alltests --gtest_color=yes COMMENT "Running tests")
 endif()

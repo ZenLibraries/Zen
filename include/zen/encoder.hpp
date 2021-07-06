@@ -196,7 +196,7 @@ struct json_encode_opts {
   std::string indentation = "";
 };
 
-std::unique_ptr<encoder> make_json_encoder(std::ostream& out, json_encode_opts opts);
+std::unique_ptr<encoder> make_json_encoder(std::ostream& out, json_encode_opts opts = json_encode_opts {});
 
 template<typename T>
 std::string encode_json(const T& value, json_encode_opts opts = json_encode_opts {}) {

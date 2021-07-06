@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -17,15 +18,15 @@ class zip_iterator;
 template<typename T>
 class zip_iterator : public iterator_adaptor<
     zip_iterator<T>,
-    meta::map_t<T, meta::lift<meta::get_element>>,
-    meta::map_t<T, meta::lift<meta::get_element>>
+    meta::map_t<T, meta::lift<meta::get_element<meta::_1>>>,
+    meta::map_t<T, meta::lift<meta::get_element<meta::_1>>>
  > {
 
   T iterators;
 
 public:
 
-  using value_type = meta::map_t<T, meta::lift<meta::get_element>>;
+  using value_type = meta::map_t<T, meta::lift<meta::get_element<meta::_1>>>;
   using reference = value_type;
 
   zip_iterator(T iterators):
@@ -56,15 +57,11 @@ public:
   }
 
   void increment() {
-    for (auto& iter: iterators) {
-      ++iter;
-    }
+    std::apply([&](auto& ...args) { ((++args),...); }, iterators);
   }
 
   void decrement() {
-    for (auto& iter: iterators) {
-      --iter;
-    }
+    std::apply([&](auto& ...args) { ((--args),...); }, iterators);
   }
 
   zip_iterator next_n(std::ptrdiff_t offset) {
@@ -80,7 +77,7 @@ public:
 template<typename ...Ts>
 struct zip_impl<
   std::tuple<Ts...>
-, std::enable_if_t<meta::andmap_v<meta::lift<meta::is_iterator>, std::tuple<Ts...>>>
+, std::enable_if_t<meta::andmap_v<meta::lift<meta::is_iterator<std::remove_reference<meta::_1>>>, std::tuple<Ts...>>>
 > {
   static auto apply(Ts&& ...args) {
     return zip_iterator<std::tuple<Ts...>>(std::tuple<Ts...>(std::forward<Ts>(args)...));

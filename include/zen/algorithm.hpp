@@ -88,6 +88,26 @@ typename meta::get_element_t<RangeT> last(RangeT range) {
   return *prev;
 }
 
+template<typename T>
+typename std::enable_if<!std::is_const_v<T>, typename T::iterator>::type start(T& container) {
+  return container.begin();
+}
+
+template<typename T>
+typename std::enable_if<std::is_const_v<T>, typename T::const_iterator>::type start(T& container) {
+  return container.cbegin();
+}
+
+template<typename T>
+typename std::enable_if<!std::is_const_v<T>, typename T::iterator>::type stop(T& container) {
+  return container.end();
+}
+
+template<typename T>
+typename std::enable_if<std::is_const_v<T>, typename T::const_iterator>::type stop(T& container) {
+  return container.cend();
+}
+
 ZEN_NAMESPACE_END
 
 #endif // of #ifndef ZEN_ALGORITHM_HPP

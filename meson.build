@@ -7,10 +7,10 @@ zen_enable_assertions = get_option('zen_enable_assertions')
 
 cmake = import('cmake')
 
-msgpack_opts = cmake.subproject_options()
-msgpack_opts.add_cmake_defines({ 'MSGPACK_ENABLE_STATIC': true })
-msgpack_proj = cmake.subproject('msgpack', options: msgpack_opts)
-msgpack_dep = msgpack_proj.dependency('msgpackc')
+# msgpack_opts = cmake.subproject_options()
+# msgpack_opts.add_cmake_defines({ 'MSGPACK_ENABLE_STATIC': true })
+# msgpack_proj = cmake.subproject('msgpack', options: msgpack_opts)
+# msgpack_dep = msgpack_proj.dependency('msgpackc')
 
 if zen_enable_tests
   gtest_proj = subproject('gtest')

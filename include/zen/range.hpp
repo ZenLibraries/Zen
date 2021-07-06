@@ -4,6 +4,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "zen/meta.hpp"
 #include "zen/zip_iterator.hpp"
 
 ZEN_NAMESPACE_START
@@ -44,12 +45,12 @@ auto make_iterator_range(IterT&& a, IterT&& b) {
 template<typename ...Ts>
 struct zip_impl<
   std::tuple<Ts...>
-, std::enable_if_t<meta::andmap_v<meta::lift<meta::is_range>, std::tuple<std::remove_reference_t<Ts>...>>>
+, std::enable_if_t<meta::andmap_v<meta::lift<meta::is_range<std::remove_reference<meta::_1>>>, std::tuple<Ts...>>>
 > {
   static auto apply(Ts&& ...args) {
     return make_iterator_range(
-        zip(args.begin()...),
-        zip(args.end()...)
+        zip(start(args)...),
+        zip(stop(args)...)
     );
   }
 };
