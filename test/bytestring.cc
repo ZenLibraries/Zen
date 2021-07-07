@@ -49,8 +49,6 @@ TEST(ByteStringTest, ReportsCorrectSize) {
   ASSERT_EQ(d.size(), 4);
 }
 
-#include "zen/range.hpp"
-
 TEST(ByteStringView, CanCompareWithByteString) {
 
   zen::bytestring a { "foo" };

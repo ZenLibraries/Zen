@@ -10,8 +10,29 @@
 #include "zen/config.hpp"
 #include "zen/algorithm.hpp"
 #include "zen/zip_iterator.hpp"
+#include "zen/range.hpp"
 
 ZEN_NAMESPACE_START
+
+inline bool string_equal_helper(const char* a, const char* b, std::size_t a_sz) {
+  for (;;) {
+    auto ch_a = *a;
+    auto ch_b = *b;
+    if (ch_a == '\0') {
+      return ch_b == '\0';
+    }
+    if (ch_b == '\0') {
+      return ch_a == '\0';
+    }
+    if (ch_a != ch_b) {
+      return false;
+    }
+    ++a;
+    ++b;
+  }
+  return true;
+}
+
 
 template<std::size_t N = 1024>
 class basic_bytestring;
@@ -31,16 +52,8 @@ public:
   bytestring_view(const BS& data):
     ptr(data.ptr), sz(data.sz) {}
 
-  template<std::size_t N>
-  bool operator==(const char other[N]) const noexcept {
-    auto it = ptr;
-    auto end = ptr + sz;
-    for (std::size_t i = 0; i < N; ++i) {
-      if (it == end || other[i] != it) {
-        return false;
-      }
-    }
-    return true;
+  bool operator==(const char* other) const noexcept {
+    return string_equal_helper(ptr, other, sz);
   }
 
   template<std::size_t N>
@@ -146,17 +159,8 @@ public:
     return ptr + sz;
   }
 
-  template<std::size_t N2>
-  bool operator==(const char other[N2]) const noexcept {
-    if (sz != N2) {
-      return false;
-    }
-    for (auto i = 0; i < N2; ++i) {
-      if (ptr[i] != other[i]) {
-        return false;
-      }
-    }
-    return true;
+  bool operator==(const char* other) const noexcept {
+    return string_equal_helper(ptr, other, sz);
   }
 
   template<std::size_t N2>
@@ -176,12 +180,30 @@ public:
     return other == *this;
   }
 
+  char& operator[](std::size_t index) noexcept {
+    return ptr[index];
+  }
+
+  const char& operator[](std::size_t index) const noexcept {
+    return ptr[index];
+  }
+
   bytestring_view as_view() const noexcept {
     return bytestring_view(*this);
   }
 
   std::size_t size() const noexcept {
     return sz;
+  }
+
+  const char* as_cstr() const {
+    return ptr;
+  }
+
+  void resize(std::size_t new_sz) {
+    ZEN_ASSERT(new_sz <= sz);
+    sz = new_sz + 1;
+    ptr[new_sz] = '\0';
   }
 
   ~basic_bytestring() {
