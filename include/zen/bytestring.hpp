@@ -77,6 +77,14 @@ public:
     return ptr + sz;
   }
 
+  const_iterator begin() const noexcept {
+    return ptr;
+  }
+
+  const_iterator end() const noexcept {
+    return ptr + sz;
+  }
+
   const_iterator cbegin() const noexcept {
     return ptr;
   }
@@ -86,6 +94,13 @@ public:
   }
 
 };
+
+inline std::ostream& operator<<(std::ostream& out, const bytestring_view& bs) {
+  for (auto ch: bs) {
+    out << ch;
+  }
+  return out;
+}
 
 template<std::size_t N>
 class basic_bytestring {
@@ -151,6 +166,14 @@ public:
     return ptr + sz;
   }
 
+  const_iterator begin() const noexcept {
+    return ptr;
+  }
+
+  const_iterator end() const noexcept {
+    return ptr + sz;
+  }
+
   const_iterator cbegin() const noexcept {
     return ptr;
   }
@@ -213,6 +236,12 @@ public:
   }
 
 };
+
+template<std::size_t N>
+std::ostream& operator<<(std::ostream& out, const basic_bytestring<N>& bs) {
+  out << bs.as_cstr();
+  return out;
+}
 
 using bytestring = basic_bytestring<>;
 
