@@ -47,7 +47,7 @@ static result<std::any> parse_integral(std::string_view arg) {
     if (!is_digit(ch)) {
       return left(make_cloned<invalid_integer_error>(std::string(arg)));
     }
-    result += std::pow(10, i) * parse_decimal(ch);
+    result = result * 10 + parse_decimal_digit(ch);
   }
   return right(result);
 }

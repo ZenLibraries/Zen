@@ -48,6 +48,10 @@ namespace zen {
 
       void normalize();
 
+      std::string as_std_string() const {
+        return contents.as_std_string();
+      }
+
       result<bool> exists();
 
       iterator begin();

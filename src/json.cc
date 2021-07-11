@@ -1,110 +1,119 @@
 
+#include <cstdlib>
 #include <memory>
 #include <sstream>
 #include <cmath>
 #include <stack>
+#include <variant>
 
-#include "zen/encoder.hpp"
+#include "zen/char.hpp"
+#include "zen/config.hpp"
+#include "zen/transformer.hpp"
+#include "zen/json.hpp"
+#include "zen/stream.hpp"
+#include "zen/either.hpp"
+#include "zen/value.hpp"
 
 ZEN_NAMESPACE_START
 
-    //static void print_json_string(std::string str, std::ostream& out) {
-    //  out << '"';
-    //  for (auto ch: str) {
-    //    out << ch;
-    //  }
-    //  out << '"';
-    //}
+static void print_json_string(const string& str, std::ostream& out) {
+  out << '"';
+  for (auto ch: str) {
+    // FIXME This should be UTF-8-encoded
+    out << ch;
+  }
+  out << '"';
+}
 
-    //static void print_impl(const value &v, std::ostream& out, int indent) {
+static void print_impl(const value &v, std::ostream& out, int indent) {
 
-    //  switch (v.get_type()) {
+  switch (v.get_type()) {
 
-    //    case value_type::array:
-    //    {
-    //      auto array = v.get_array();
-    //      if (array.empty()) {
-    //        out << "[]";
-    //        break;
-    //      }
-    //      out << "[\n";
-    //      auto curr = array.cbegin();
-    //      auto end = array.cend();
-    //      if (curr != end) {
-    //        auto new_indent = indent + 2;
-    //        out << std::string(indent + 2, ' ');
-    //        print_impl(**curr, out, new_indent);
-    //        curr++;
-    //        for (; curr != end; curr++) {
-    //          out << ",\n" << std::string(indent + 2, ' ');
-    //          print_impl(**curr, out, indent + 2);
-    //        }
-    //      }
-    //      out << "\n" << std::string(indent, ' ') << "]";
-    //      break;
-    //    }
+    case value_type::array:
+    {
+      auto array = v.as_array();
+      if (array.empty()) {
+        out << "[]";
+        break;
+      }
+      out << "[\n";
+      auto curr = array.cbegin();
+      auto end = array.cend();
+      if (curr != end) {
+        auto new_indent = indent + 2;
+        out << std::string(indent + 2, ' ');
+        print_impl(*curr, out, new_indent);
+        curr++;
+        for (; curr != end; curr++) {
+          out << ",\n" << std::string(indent + 2, ' ');
+          print_impl(*curr, out, indent + 2);
+        }
+      }
+      out << "\n" << std::string(indent, ' ') << "]";
+      break;
+    }
 
-    //    case value_type::boolean:
-    //      out << (v.is_true() ? "true" : "false");
-    //      break;
+    case value_type::boolean:
+      out << (v.is_true() ? "true" : "false");
+      break;
 
-    //    case value_type::string:
-    //      print_json_string(v.get_string(), out);
-    //      break;
+    case value_type::string:
+      print_json_string(v.as_string(), out);
+      break;
 
-    //    case value_type::null:
-    //      out << "null";
-    //      break;
+    case value_type::null:
+      out << "null";
+      break;
 
-    //    case value_type::dooble:
-    //      out << v.get_double();
-    //      break;
+    case value_type::fractional:
+      out << v.as_fractional();
+      break;
 
-    //    case value_type::integer:
-    //      out << v.get_long();
-    //      break;
+    case value_type::integer:
+      out << v.as_integer();
+      break;
 
-    //    case value_type::object:
-    //    {
-    //      auto object = v.get_object();
-    //      if (object.empty()) {
-    //        out << "{}";
-    //        break;
-    //      }
-    //      out << "{\n";
-    //      auto curr = object.cbegin();
-    //      auto end = object.cend();
-    //      if (curr != end) {
-    //        auto new_indent = indent + 2;
-    //        out << std::string(new_indent, ' ');
-    //        print_json_string(curr->first, out);
-    //        out << ": ";
-    //        print_impl(*curr->second, out, new_indent);
-    //        curr++;
-    //        for (; curr != end; curr++) {
-    //          out << ",\n" << std::string(new_indent, ' ');
-    //          print_json_string(curr->first, out);
-    //          out << ": ";
-    //          print_impl(*curr->second, out, new_indent);
-    //        }
-    //      }
-    //      out << "\n" << std::string(indent, ' ') << "}";
-    //      break;
-    //    }
+    case value_type::object:
+    {
+      auto object = v.as_object();
+      if (object.empty()) {
+        out << "{}";
+        break;
+      }
+      out << "{\n";
+      auto curr = object.cbegin();
+      auto end = object.cend();
+      if (curr != end) {
+        auto new_indent = indent + 2;
+        out << std::string(new_indent, ' ');
+        print_json_string(curr->first, out);
+        out << ": ";
+        print_impl(curr->second, out, new_indent);
+        curr++;
+        for (; curr != end; curr++) {
+          out << ",\n" << std::string(new_indent, ' ');
+          print_json_string(curr->first, out);
+          out << ": ";
+          print_impl(curr->second, out, new_indent);
+        }
+      }
+      out << "\n" << std::string(indent, ' ') << "}";
+      break;
+    }
 
-    //  }
+  }
 
-    //}
+}
 
-    //void print(const value &v, std::ostream& out) {
-    //  print_impl(v, out, 0);
-    //}
+void print(const value &v, std::ostream& out) {
+  print_impl(v, out, 0);
+}
 
-    //std::string to_string(const value& v) {
-    //  std::ostringstream ss;
-    //  print(v, ss);
-    //  return ss.str();
-    //}
+std::string to_string(const value& v) {
+  std::ostringstream ss;
+  print(v, ss);
+  return ss.str();
+}
 
 std::string escape_char(char ch) {
   switch (ch) {
@@ -120,7 +129,7 @@ std::string escape_char(char ch) {
   }
 }
 
-class json_encoder : public encoder {
+class json_encoder : public transformer {
 
   std::stack<bool> levels;
   std::string indentation;
@@ -133,56 +142,64 @@ class json_encoder : public encoder {
     }
   }
 
+  void write_string(const std::string& str) {
+    out << '"';
+    for (auto ch: str) {
+      out << escape_char(ch);
+    }
+    out << '"';
+  }
+
 public:
 
   json_encoder(std::ostream& out, std::string indentation):
     indentation(indentation), out(out) {}
 
-  void encode(bool v) override {
+  void transform(bool& v) override {
     out << (v ? "true" : "false");
   }
 
-  void encode(char v) override {
+  void transform(char& v) override {
     out << '"' << escape_char(v) << '"';
   }
 
-  void encode(short v) override {
+  void transform(short& v) override {
     out << v;
   }
 
-  void encode(int v) override {
+  void transform(int& v) override {
     out << v;
   }
 
-  void encode(long v) override {
+  void transform(long& v) override {
     out << v;
   }
 
-  void encode(long long v) override {
+  void transform(long long& v) override {
     out << v;
   }
 
-  void encode(unsigned char v) override {
+  void transform(unsigned char& v) override {
     out << v;
   }
 
-  void encode(unsigned short v) override {
+  void transform(unsigned short& v) override {
     out << v;
   }
 
-  void encode(unsigned int v) override {
+  void transform(unsigned int& v) override {
     out << v;
   }
 
-  void encode(unsigned long v) override {
+  void transform(unsigned long& v) override {
     out << v;
   }
 
-  void encode(unsigned long long v) override {
+  void transform(unsigned long long& v) override {
     out << v;
   }
 
-  void encode(float v) override {
+  void transform(float& v) override {
     float integral;
     if (std::modf(v, &integral) == 0) {
       out << integral << ".0";
@@ -191,7 +208,7 @@ public:
     }
   }
 
-  void encode(double v) override {
+  void transform(double& v) override {
     double integral;
     if (std::modf(v, &integral) == 0) {
       out << integral << ".0";
@@ -200,20 +217,16 @@ public:
     }
   }
 
-  void encode(const std::string_view& v) override {
-    out << '"';
-    for (auto ch: v) {
-      out << escape_char(ch);
-    }
-    out << '"';
+  void transform(std::string& v) override {
+    write_string(v);
   }
 
-  void start_encode_struct(std::string tag_name) override {
+  void start_transform_object(const std::string& tag_name) override {
     out << "{";
     levels.push(true);
   }
 
-  void end_encode_struct() override {
+  void end_transform_object() override {
     levels.pop();
     if (!indentation.empty()) {
       out << "\n";
@@ -222,7 +235,7 @@ public:
     out << "}";
   }
 
-  void start_encode_field(std::string name) override {
+  void start_transform_field(const std::string& name) override {
     if (!levels.top()) {
       out << ",";
     } else {
@@ -232,18 +245,18 @@ public:
       out << "\n";
       write_indentation(levels.size());
     }
-    encode(name);
+    write_string(name);
     out << ":";
     if (!indentation.empty()) {
       out << " ";
     }
   }
 
-  void end_encode_field() override {
+  void end_transform_field() override {
 
   }
 
-  void start_encode_element() override {
+  void start_transform_element() override {
     if (!levels.top()) {
       out << ",";
     } else {
@@ -255,25 +268,27 @@ public:
     }
   }
 
-  void end_encode_element() override {
+  void end_transform_element() override {
     // if (!indentation.empty()) {
     //   out << "\n";
     //   write_indentation(levels.size());
     // }
   }
 
-  void start_encode_optional() override {
+  void start_transform_optional() override {
+
   }
 
-  void end_encode_optional() override {
+  void end_transform_optional() override {
+
   }
 
-  void start_encode_sequence() override {
+  void start_transform_sequence() override {
     levels.push(true);
     out << "[";
   }
 
-  void end_encode_sequence() override {
+  void end_transform_sequence() override {
     levels.pop();
     if (!indentation.empty()) {
       out << "\n";
@@ -282,11 +297,11 @@ public:
     out << "]";
   }
 
-  void encode_nil() override {
+  void transform_nil() override {
     out << "null";
   }
 
-  void encode_size(std::size_t size) override {
+  void transform_size(std::size_t size) override {
 
   }
 
@@ -296,9 +311,409 @@ public:
 
 };
 
-std::unique_ptr<encoder> make_json_encoder(std::ostream& out, json_encode_opts opts) {
+std::unique_ptr<transformer> make_json_encoder(
+  std::ostream& out,
+  json_encode_opts opts
+) {
   return std::make_unique<json_encoder>(out, opts.indentation);
 }
+
+static bool is_json_whitespace(char ch) {
+  switch (ch) {
+    case ' ':
+    case '\n':
+    case '\r':
+    case '\t':
+      return true;
+    default:
+      return false;
+  }
+}
+
+static bool is_json_digit(char ch) {
+  switch (ch) {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      return true;
+    default:
+      return false;
+  }
+}
+
+json_parse_result parse_json(std::istream& in) {
+
+  value result;
+  std::optional<string> key;
+  std::stack<value> building;
+
+  for (;;) {
+
+    int c0;
+
+#define ZEN_GET_NO_WHITESPACE(ch) \
+    for (;;) { \
+      ch = in.get(); \
+      if (!is_json_whitespace(ch)) { \
+        break; \
+      } \
+    }
+
+#define ZEN_PEEK_NO_WHITESPACE(ch) \
+    for (;;) { \
+      ch = in.peek(); \
+      if (!is_json_whitespace(ch)) { \
+        break; \
+      } \
+      in.get(); \
+    }
+
+#define ZEN_SCAN_DIGIT(name) \
+  unsigned char name; \
+  { \
+    auto ch = in.get(); \
+    if (!is_json_digit(ch)) { \
+      return zen::left(json_parse_error::unexpected_character); \
+    } \
+    name = parse_decimal_digit(ch); \
+  }
+
+#define ZEN_ASSERT_CHAR(ch, expected) \
+    { \
+      auto temp = ch; \
+      if (temp != expected) { \
+        return left(json_parse_error::unexpected_character); \
+      } \
+    }
+
+#define ZEN_EXPECT_CHAR(expected) \
+  ZEN_ASSERT_CHAR(in.get(), expected);
+
+  ZEN_GET_NO_WHITESPACE(c0);
+
+  switch (c0) {
+
+      case '{':
+        building.push(object {});
+        continue;
+
+      case ']':
+      case '}':
+        result = building.top();
+        building.pop();
+        break;
+
+      case '[':
+        building.push(array {});
+        continue;
+
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+      {
+        bigint x = parse_decimal_digit(c0);
+
+        for (;;) {
+
+          c0 = in.peek();
+
+          switch (c0) {
+
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+              in.get();
+              x = x * 10 + parse_decimal_digit(c0);
+              continue;
+
+            case '.':
+            {
+              in.get();
+              fractional e = 1.0;
+              fractional y = 0.0;
+              fractional k = 1.0;
+
+              for (;;) {
+
+                auto c1 = in.peek();
+
+                switch (c1) {
+
+                  case '0':
+                  case '1':
+                  case '2':
+                  case '3':
+                  case '4':
+                  case '5':
+                  case '6':
+                  case '7':
+                  case '8':
+                  case '9':
+                    in.get();
+                    k /= 10.0;
+                    y += k * parse_decimal_digit(c1);
+                    continue;
+
+                  case 'e':
+                  case 'E':
+                  {
+                    in.get();
+                    e = 0.0;
+                    for (;;) {
+                      auto c2 = in.peek();
+                      switch (c2) {
+                        case '+':
+                          in.get();
+                          break;
+                        case '-':
+                          in.get();
+                          e *= -1;
+                          break;
+                        case '0':
+                        case '1':
+                        case '2':
+                        case '3':
+                        case '4':
+                        case '5':
+                        case '6':
+                        case '7':
+                        case '8':
+                        case '9':
+                          in.get();
+                          e = e * 10.0 + parse_decimal_digit(c2);
+                          break;
+                        case EOF:
+                        case ']':
+                        case '}':
+                        case ',':
+                        case ' ':
+                        case '\t':
+                        case '\r':
+                        case '\n':
+                          goto finish_fractional;
+                        default:
+                          return left(json_parse_error::unexpected_character);
+                      }
+                    }
+                  }
+
+                  case EOF:
+                  case ']':
+                  case '}':
+                  case ',':
+                  case ' ':
+                  case '\t':
+                  case '\r':
+                  case '\n':
+                    goto finish_fractional;
+
+                  default:
+                    return left(json_parse_error::unexpected_character);
+
+                }
+
+              }
+
+finish_fractional:
+              result = value(std::pow(x + y, e));
+              goto process_result;
+
+            }
+
+            case ']':
+            case '}':
+            case ',':
+            case ' ':
+            case '\t':
+            case '\r':
+            case '\n':
+            case EOF:
+              goto finish_integer;
+
+            default:
+              return left(json_parse_error::unexpected_character);
+
+          }
+
+        }
+
+finish_integer:
+        result = value(x);
+        break;
+      }
+
+      case '"':
+      {
+        string chars;
+        for (;;) {
+          auto c1 = in.get();
+          switch (c1) {
+            case '"':
+              goto finish_string;
+            case '\n':
+              return left(json_parse_error::unexpected_character);
+            case '\\':
+            {
+              auto c2 = in.get();
+              switch (c2) {
+                case '"':
+                  chars.push_back('"');
+                  break;
+                case '\\':
+                  chars.push_back('\\');
+                  break;
+                case '/':
+                  chars.push_back('/');
+                  break;
+                case 'b':
+                  chars.push_back('\b');
+                  break;
+                case 'f':
+                  chars.push_back('\f');
+                  break;
+                case 'n':
+                  chars.push_back('\n');
+                  break;
+                case 'r':
+                  chars.push_back('\r');
+                  break;
+                case 't':
+                  chars.push_back('\t');
+                  break;
+                case 'u':
+                  ZEN_SCAN_DIGIT(d0);
+                  ZEN_SCAN_DIGIT(d1);
+                  ZEN_SCAN_DIGIT(d2);
+                  ZEN_SCAN_DIGIT(d3);
+                  chars.push_back(d0 * 1000 + d1 * 100 + d2 * 10 + d3);
+                  break;
+                default:
+                  return left(json_parse_error::unrecognised_escape_sequence);
+              }
+              break;
+            }
+            default:
+              chars.push_back(c1);
+              break;
+          }
+        }
+finish_string:
+        if (!building.empty() && building.top().is_object() && !key.has_value()) {
+          key = chars;
+          ZEN_GET_NO_WHITESPACE(c0)
+          ZEN_ASSERT_CHAR(c0, ':');
+          continue;
+        }
+        result = value(chars);
+        break;
+      }
+
+      case 'n':
+        ZEN_EXPECT_CHAR('u');
+        ZEN_EXPECT_CHAR('l');
+        ZEN_EXPECT_CHAR('l');
+        result = value(null {});
+        break;
+
+      case 't':
+        ZEN_EXPECT_CHAR('r');
+        ZEN_EXPECT_CHAR('u');
+        ZEN_EXPECT_CHAR('e');
+        result = value(true);
+        break;
+
+      case 'f':
+        ZEN_EXPECT_CHAR('a');
+        ZEN_EXPECT_CHAR('l');
+        ZEN_EXPECT_CHAR('s');
+        ZEN_EXPECT_CHAR('e');
+        result = value(false);
+        break;
+
+      default:
+        return left(json_parse_error::unexpected_character);
+
+    }
+
+process_result:
+
+    if (building.empty()) {
+      break;
+    }
+
+    auto& top = building.top();
+
+    switch (top.get_type()) {
+
+      case value_type::object:
+        top.as_object().emplace(*key, result);
+        key = {};
+        break;
+
+      case value_type::array:
+        top.as_array().push_back(result);
+        break;
+
+      default:
+        ZEN_UNREACHABLE
+
+    }
+
+    ZEN_PEEK_NO_WHITESPACE(c0)
+    switch (c0) {
+      case '}':
+      case ']':
+        result = building.top();
+        building.pop();
+        goto process_result;
+      case ',':
+        in.get();
+        continue;
+      default:
+        return zen::left(json_parse_error::unexpected_character);
+    }
+
+    // We should never be able to get here, as the previous switch-statement
+    // should have modified the control-flow in all cases.
+
+  }
+
+  return right(result);
+
+}
+
+json_parse_result parse_json(const std::string& in) {
+  std::istringstream iss(in);
+  return parse_json(iss);
+}
+
+// std::unique_ptr<transformer> make_json_decoder(
+//   std::istream& in,
+//   json_decode_opts opts
+// ) {
+//   return std::make_unique<json_decoder>(in);
+// }
 
 ZEN_NAMESPACE_END
 

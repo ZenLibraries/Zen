@@ -15,16 +15,13 @@
 ZEN_NAMESPACE_START
 
 inline bool string_equal_helper(const char* a, const char* b, std::size_t a_sz) {
-  for (;;) {
+  for (std::size_t i = 0;; ++i) {
+    if (i == a_sz) {
+      return *b == '\0';
+    }
     auto ch_a = *a;
     auto ch_b = *b;
-    if (ch_a == '\0') {
-      return ch_b == '\0';
-    }
-    if (ch_b == '\0') {
-      return ch_a == '\0';
-    }
-    if (ch_a != ch_b) {
+    if (ch_b == '\0' || ch_a != ch_b) {
       return false;
     }
     ++a;
@@ -32,7 +29,6 @@ inline bool string_equal_helper(const char* a, const char* b, std::size_t a_sz) 
   }
   return true;
 }
-
 
 template<std::size_t N = 1024>
 class basic_bytestring;
@@ -68,6 +64,17 @@ public:
     }
     return true;
   }
+
+  // FIXME Implement this properly
+  template<typename T>
+  bool operator!=(T other) const {
+    return !(*this == other);
+  }
+
+  const char& operator[](std::size_t index) const noexcept {
+    return ptr[index];
+  }
+
 
   iterator begin() noexcept {
     return ptr;
@@ -141,6 +148,14 @@ public:
       ptr_sz = N;
     }
 
+  basic_bytestring(std::string str): ptr_sz(str.size()), sz(str.size()) {
+    ptr = static_cast<char*>(malloc(sz));
+    if (ptr == nullptr) {
+      ZEN_PANIC("insufficient memory");
+    }
+    memcpy(ptr, str.c_str(), sz);
+  }
+
   basic_bytestring(const basic_bytestring& other):
     ptr_sz(other.ptr_sz),
     sz(other.sz) {
@@ -203,6 +218,12 @@ public:
     return other == *this;
   }
 
+  // FIXME Implement this properly
+  template<typename T>
+  bool operator!=(T other) const {
+    return !(*this == other);
+  }
+
   char& operator[](std::size_t index) noexcept {
     return ptr[index];
   }
@@ -223,9 +244,13 @@ public:
     return ptr;
   }
 
+  std::string as_std_string() const {
+    return std::string(ptr, sz);
+  }
+
   void resize(std::size_t new_sz) {
     ZEN_ASSERT(new_sz <= sz);
-    sz = new_sz + 1;
+    sz = new_sz;
     ptr[new_sz] = '\0';
   }
 

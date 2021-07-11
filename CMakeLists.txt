@@ -76,6 +76,7 @@ if (ZEN_ENABLE_TESTS)
     test/meta.cc
     test/bytestring.cc
     test/filepath.cc
+    test/json.cc
   )
   target_link_libraries(alltests zen gtest gtest_main)
   add_custom_target(check COMMAND alltests --gtest_color=yes COMMENT "Running tests")

@@ -12,7 +12,7 @@ TEST(ByteStringTest, CanConstructFromStringLiteral) {
   zen::bytestring b { "bar" };
 }
 
-TEST(ByteStingTest, CanCheckEqualityBetweenTwoByteStrings) {
+TEST(ByteStringTest, CanCheckEqualityBetweenTwoByteStrings) {
 
   zen::bytestring a { "foo" };
   zen::bytestring b { "bar" };
@@ -36,6 +36,17 @@ TEST(ByteStingTest, CanCheckEqualityBetweenTwoByteStrings) {
   ASSERT_FALSE(d == b);
   ASSERT_FALSE(d == c);
   ASSERT_TRUE(d == d);
+}
+
+TEST(ByteStringTest, CanCheckEqualityWithConstChar) {
+  zen::bytestring a;
+  zen::bytestring b { "foo" };
+  ASSERT_EQ(a, "");
+  ASSERT_NE(a, "foo");
+  ASSERT_EQ(b, "foo");
+  ASSERT_NE(b, "foob");
+  ASSERT_NE(b, "fo");
+  ASSERT_NE(b, "");
 }
 
 TEST(ByteStringTest, ReportsCorrectSize) {

@@ -11,6 +11,10 @@ inline bool is_alpha(char ch) {
   return (ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122);
 }
 
+inline bool is_alphanum(char ch) {
+  return is_alpha(ch) || is_digit(ch);
+}
+
 inline bool is_lalpha(char ch) {
   return ch >= 97 && ch <= 122;
 }
@@ -35,7 +39,7 @@ inline bool is_newline(char ch) {
   return ch == '\n';
 }
 
-inline int parse_decimal(char ch) {
+inline int parse_decimal_digit(char ch) {
   return ch - 48;
 }
 
