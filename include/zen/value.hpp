@@ -51,7 +51,8 @@ private:
 
 public:
 
-  value() {}
+  value():
+    type(value_type::null) {}
 
   value(null):
     type(value_type::null) {}
@@ -68,8 +69,10 @@ public:
   value(object o):
     type(value_type::object), o(o) {}
 
-  value(array a):
-    type(value_type::array), a(a) {}
+  value(array value):
+    type(value_type::array) {
+      new (&a) array(value);
+    }
 
   value(string s):
     type(value_type::string), s(s) { }
@@ -308,7 +311,6 @@ public:
 
 using array = value::array;
 using object = value::object;
-
 
 ZEN_NAMESPACE_END
 
