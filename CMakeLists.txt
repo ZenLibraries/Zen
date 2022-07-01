@@ -38,6 +38,8 @@ set(zen_sources
   src/program_options.cc
   src/json.cc
   src/filepath.cc
+  src/unicode.cc
+  src/msgpack.cc
 )
 
 add_library(
@@ -77,6 +79,7 @@ if (ZEN_ENABLE_TESTS)
     test/bytestring.cc
     test/filepath.cc
     test/json.cc
+    test/unicode.cc
   )
   target_link_libraries(alltests zen gtest gtest_main)
   add_custom_target(check COMMAND alltests --gtest_color=yes COMMENT "Running tests")

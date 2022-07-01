@@ -317,7 +317,7 @@ right_t<R> right(R&& value) {
     return ::zen::left(std::move(value.left())); \
   }
 
-#define ZEN_TRY2(expr) \
+#define ZEN_TRY_DISCARD(expr) \
   { \
     auto zen__either__result = (expr); \
     if (zen__either__result.is_left()) { \

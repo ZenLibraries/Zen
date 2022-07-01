@@ -396,7 +396,7 @@ result<void> program::parse_args_impl(
         if (subcommand_match == ptr->mapping.end()) {
           return left(make_cloned<command_not_found_error>(arg));
         }
-        ZEN_TRY2(validate_required(*command, result));
+        ZEN_TRY_DISCARD(validate_required(*command, result));
         command_stack.push_back(subcommand_match->second);
         command = subcommand_match->second;
         ++i;
@@ -431,7 +431,7 @@ result<void> program::parse_args_impl(
   }
 
   for (auto command: command_stack) {
-    ZEN_TRY2(validate_required(*command, result));
+    ZEN_TRY_DISCARD(validate_required(*command, result));
   }
 
   return right();

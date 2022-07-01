@@ -3,16 +3,29 @@
 
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <type_traits>
 #include <string>
 
+#include "zen/error.hpp"
+#include "zen/maybe.hpp"
+
 namespace zen {
 
-  template<typename T>
+  template<typename T, typename Error = error>
   class stream {
   public:
-    virtual T get() = 0;
-    virtual T peek(std::size_t offset = 1) = 0;
+
+    virtual result<maybe<T>> get() = 0;
+    virtual result<maybe<T>> peek(std::size_t offset = 1) = 0;
+
+    virtual result<void> skip(std::size_t count = 1) {
+      for (std::size_t i = 0; i < count; i++) {
+        ZEN_TRY_DISCARD(get());
+      }
+      return right();
+    }
+
   };
 
   template<typename T>
@@ -24,25 +37,35 @@ namespace zen {
 
     using value_type = T;
 
-    T get() override {
+    result<maybe<T>> get() override {
       T element;
       if (buffer.empty()) {
-        element = read();
+        auto result = read();
+        ZEN_TRY(result);
+        if (!result->has_value()) {
+          return right(std::nullopt);
+        }
+        element = **result;
       } else {
         element = buffer.front();
         buffer.pop_front();
       }
-      return element;
+      return right(element);
     }
 
-    T peek(std::size_t offset) override {
+    result<maybe<T>> peek(std::size_t offset) override {
       while (buffer.size() < offset) {
-        buffer.push_back(read());
+        auto result = read();
+        ZEN_TRY(result);
+        if (!result->has_value()) {
+          return right(std::nullopt);
+        }
+        buffer.push_back(**result);
       }
-      return buffer[offset-1];
+      return right(buffer[offset-1]);
     }
 
-    virtual T read() = 0;
+    virtual result<maybe<T>> read() = 0;
 
   };
 
@@ -54,21 +77,26 @@ namespace zen {
 
   private:
 
-    value_type sentry;
     IterT current;
     IterT end;
 
   public:
 
-    iterator_stream(IterT begin, IterT end, value_type sentry):
-      current(begin), end(end), sentry(sentry) {}
+    iterator_stream(IterT begin, IterT end):
+      current(begin), end(end) {}
 
-    value_type get() override {
-      return current == end ? sentry : *(current++);
+    result<maybe<value_type>> get() override {
+      if (current == end) {
+        return right(std::nullopt);
+      }
+      return right(*(current++));
     }
 
-    value_type peek(std::size_t offset = 1) override {
-      return current == end ? sentry : *current;
+    result<maybe<value_type>> peek(std::size_t offset = 1) override {
+      if (current == end) {
+        return right(std::nullopt);
+      }
+      return right(*current);
     }
 
   };
@@ -77,7 +105,6 @@ namespace zen {
     return iterator_stream<std::string::const_iterator, int> {
       str.begin(),
       str.end(),
-      EOF
     };
   }
 
@@ -85,7 +112,6 @@ namespace zen {
     return iterator_stream<std::string_view::const_iterator, int> {
       str.begin(),
       str.end(),
-      EOF
     };
   }
 

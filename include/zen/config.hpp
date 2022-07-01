@@ -2,6 +2,7 @@
 #define ZEN_CONFIG_HPP
 
 #include <stdio.h>
+#include <cstdlib>
 
 #define ZEN_CAT(arg) #arg
 #define ZEN_CAT2(arg) ZEN_CAT(arg)
