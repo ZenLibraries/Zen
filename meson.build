@@ -7,6 +7,7 @@ zen_enable_assertions = get_option('zen_enable_assertions')
 
 cmake = import('cmake')
 
+# TODO Implement our own version of MsgPack
 # msgpack_opts = cmake.subproject_options()
 # msgpack_opts.add_cmake_defines({ 'MSGPACK_ENABLE_STATIC': true })
 # msgpack_proj = cmake.subproject('msgpack', options: msgpack_opts)
@@ -46,7 +47,7 @@ endif
 zen_lib = static_library(
   'zen',
   'src/program_options.cc',
-  'src/json_encoder.cc',
+  'src/json.cc',
   include_directories: 'include',
   cpp_args: zen_compile_args,
 )
@@ -54,7 +55,6 @@ zen_lib = static_library(
 zen_dep = declare_dependency(
   include_directories: 'include',
   compile_args: zen_compile_args,
-  dependencies: [ msgpack_dep ],
   link_with: [ zen_lib ],
 )
 
