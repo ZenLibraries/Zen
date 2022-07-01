@@ -27,7 +27,6 @@ TEST(JsonParse, CanParseSimpleStringLiteral) {
   ASSERT_EQ(s1[12], '!');
 }
 
-
 TEST(JsonParse, CanParseASCIIEscapeSequence) {
   auto r1 = zen::parse_json("\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"").unwrap();
   ASSERT_TRUE(r1.is_string());
@@ -119,5 +118,7 @@ TEST(JsonParse, DoesNotCrashWhenGivenInvalidChars) {
 }
 
 TEST(JsonParse, CanParseFractional) {
-  auto r1 = zen::parse_json("2.3");
+  auto r1 = zen::parse_json("2.3").unwrap();
+  ASSERT_TRUE(r1.is_fractional());
+  ASSERT_EQ(r1.as_fractional(), 2.3);
 }
