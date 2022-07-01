@@ -31,7 +31,7 @@ endif()
 # This must be added before doing any other configuration so that
 # changing something local doesn't trigger a GoogleTest rebuild
 if (ZEN_ENABLE_TESTS)
-  add_subdirectory(subprojects/googletest-release-1.10.0 EXCLUDE_FROM_ALL)
+  add_subdirectory(subprojects/googletest-release-1.11.0 EXCLUDE_FROM_ALL)
 endif()
 
 set(zen_sources
