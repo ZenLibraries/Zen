@@ -84,7 +84,7 @@ public:
 
 class object_transformer {
 
-  transformer& transformer;
+  transformer& parent;
 
 #ifndef NDEBUG
   bool has_finalized = false;
@@ -93,17 +93,17 @@ class object_transformer {
 public:
 
   object_transformer(class transformer& transformer):
-    transformer(transformer) {}
+    parent(transformer) {}
 
   template<typename T>
   void transform_field(std::string name, T value) {
-    transformer.start_transform_field(name);
-    transformer.transform(value);
-    transformer.end_transform_field();
+    parent.start_transform_field(name);
+    parent.transform(value);
+    parent.end_transform_field();
   }
 
   void finalize() {
-    transformer.end_transform_object();
+    parent.end_transform_object();
 #ifndef NDEBUG
     has_finalized = true;
 #endif
@@ -126,7 +126,7 @@ inline object_transformer transformer::transform_object(const std::string& tag_n
 
 class sequence_transformer {
 
-  transformer& transformer;
+  transformer& parent;
 
 #ifndef NDEBUG
   bool has_finalized = false;
@@ -135,17 +135,17 @@ class sequence_transformer {
 public:
 
   inline sequence_transformer(class transformer& transformer):
-    transformer(transformer)  {}
+    parent(transformer)  {}
 
   template<typename T>
   void transform(T value) {
-    transformer.start_transform_element();
-    transformer.transform(value);
-    transformer.end_transform_element();
+    parent.start_transform_element();
+    parent.transform(value);
+    parent.end_transform_element();
   }
 
   void finalize() {
-    transformer.end_transform_sequence();
+    parent.end_transform_sequence();
 #ifndef NDEBUG
     has_finalized = true;
 #endif
