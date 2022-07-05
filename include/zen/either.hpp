@@ -103,14 +103,11 @@ ZEN_NAMESPACE_START
 template<typename L>
 struct left_t {
   L value;
-  inline left_t(L value): value(std::move(value)) {};
 };
 
 template<typename R>
 struct right_t {
   R value;
-  inline right_t(R&& value): value(std::move(value)) {};
-  inline right_t(const R& value): value(value) {};
 };
 
 template<>
@@ -148,13 +145,13 @@ public:
     }
   }
 
-//    either(const either &other) : has_right_v(other.has_right_v) {
-//      if (has_right_v) {
-//        new(&right_value)R(other.right_value);
-//      } else {
-//        new(&left_value)L(other.left_value);
-//      }
-//    }
+  either(const either &other) : has_right_v(other.has_right_v) {
+    if (has_right_v) {
+      new(&right_value)R(other.right_value);
+    } else {
+      new(&left_value)L(other.left_value);
+    }
+  }
 
   template<typename L2, typename R2>
   either(either<L2, R2>&& other): has_right_v(std::move(other.has_right_v)) {
@@ -288,8 +285,8 @@ public:
 };
 
 template<typename L>
-left_t<L> left(L& value) {
-  return left_t<L> { value };
+left_t<L&> left(L& value) {
+  return left_t<L&> { value };
 }
 
 template<typename L>
@@ -303,8 +300,8 @@ inline right_t<void> right() {
 }
 
 template<typename R>
-right_t<R> right(R& value) {
-  return right_t<R> { value };
+right_t<R&> right(R& value) {
+  return right_t<R&> { value };
 }
 
 template<typename R>

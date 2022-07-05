@@ -72,6 +72,7 @@ install(EXPORT Zen NAMESPACE "${ZEN_NAMESPACE}::" DESTINATION "${CMAKE_INSTALL_L
 if (ZEN_ENABLE_TESTS)
   add_executable(
     alltests
+    test/either.cc
     test/zip_iterator.cc
     test/iterator_adaptor.cc
     test/program_options.cc
