@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "zen/meta.hpp"
+#include "zen/mapped_iterator.hpp"
 #include "zen/zip_iterator.hpp"
 
 ZEN_NAMESPACE_START
@@ -33,6 +34,23 @@ public:
 
   IterT end() {
     return right;
+  }
+
+  template<typename F>
+  auto map(F func) {
+    using iter = mapped_iterator<IterT, F>;
+    return iterator_range<iter> {
+      iter { left, func },
+      iter { right, func },
+    };
+  }
+
+  auto map_first() {
+    return map([](auto pair) { return pair.first; });
+  }
+
+  auto map_second() {
+    return map([](auto pair) { return pair.second; });
   }
 
 };
