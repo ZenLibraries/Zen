@@ -60,6 +60,17 @@ auto make_iterator_range(IterT&& a, IterT&& b) {
   return iterator_range<IterT>(std::forward<IterT>(a), std::forward<IterT>(b));
 }
 
+/**
+ * Construct an iterator range from a pair of iterators.
+ *
+ * This function is especially useful for methods in the standard library that
+ * return such a pair of iterators, such as std::unordered_map::equal_range.
+ */
+template<typename IterT>
+auto make_iterator_range(std::pair<IterT, IterT>&& pair) {
+  return iterator_range<IterT>(std::forward<IterT>(pair.first), std::forward<IterT>(pair.second));
+}
+
 template<typename ...Ts>
 struct zip_impl<
   std::tuple<Ts...>
