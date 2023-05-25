@@ -72,6 +72,7 @@ if (ZEN_ENABLE_TESTS)
   add_executable(
     alltests
     test/either.cc
+    test/mapped_iterator.cc
     test/zip_iterator.cc
     test/iterator_adaptor.cc
     test/program_options.cc
