@@ -214,16 +214,6 @@ public:
     return true;
   }
 
-  bool operator==(const bytestring_view& other) const noexcept {
-    return other == *this;
-  }
-
-  // FIXME Implement this properly
-  template<typename T>
-  bool operator!=(T other) const {
-    return !(*this == other);
-  }
-
   char& operator[](std::size_t index) noexcept {
     return ptr[index];
   }
