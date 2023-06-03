@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iterator>
 #include <type_traits>
+#include <unordered_set>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -12,6 +13,11 @@
 using namespace zen;
 
 using test_zip_iter_traits = std::iterator_traits<zip_iterator<std::tuple<std::vector<int>>>>;
+
+using zip1 = zip_iterator<std::tuple<std::vector<int>>>;
+using zip2 = zip_iterator<std::tuple<std::vector<int>, std::unordered_set<float>>>;
+
+static_assert(std::is_same_v<zip1::iterator_category, std::random_access_iterator_tag>);
 
 static_assert(std::is_same_v<zip_iterator<std::tuple<std::vector<int>>>::value_type, std::tuple<int>>);
 

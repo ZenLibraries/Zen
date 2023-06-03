@@ -5,8 +5,6 @@
 #include <iterator>
 #include <type_traits>
 
-#include "zen/iterator_adaptor.hpp"
-
 namespace zen {
 
   template<typename IterT, typename F>
@@ -15,22 +13,24 @@ namespace zen {
     IterT iterator;
     F func;
 
+    using traits = std::iterator_traits<IterT>;
+
   public:
 
-    using iterator_category = std::random_access_iterator_tag;
+    using iterator_category = traits::iterator_category;
 
-    // NOTE Make sure to adjust the template argument when changing this type
     using value_type = typename std::invoke_result<F, typename IterT::value_type>::type;
 
     /**
-     * Generally speaking, it does not make sense to reference a return type, so
-     * that is why a reference will always be a plain value_type.
+     * Generally speaking, it does not make sense to reference a return type
+     * that should be owned, so that is why a reference will always be a plain
+     * value_type.
      */
     using reference = value_type;
 
-    using difference_type = IterT::difference_type;
+    using difference_type = traits::difference_type;
 
-    using pointer = IterT::pointer;
+    using pointer = traits::pointer;
 
     mapped_iterator(IterT iterator, F func):
       iterator(iterator), func(func) {}
@@ -45,12 +45,12 @@ namespace zen {
       return iterator != other.iterator;
     }
 
-    IterT& operator++() requires(std::incrementable<IterT>) {
+    mapped_iterator& operator++() requires(std::incrementable<IterT>) {
       ++iterator;
       return *this;
     }
 
-    IterT& operator--() requires(std::bidirectional_iterator<IterT>) {
+    mapped_iterator& operator--() requires(std::bidirectional_iterator<IterT>) {
       --iterator;
       return *this;
     }
@@ -96,11 +96,12 @@ namespace std {
   template <typename IterT, typename F>
   struct iterator_traits<zen::mapped_iterator<IterT, F>>
   {
-      using difference_type = zen::mapped_iterator<IterT, F>::difference_type;
-      using value_type = zen::mapped_iterator<IterT, F>::value_type;
-      using pointer = zen::mapped_iterator<IterT, F>::pointer;
-      using reference = zen::mapped_iterator<IterT, F>::reference;
-      using iterator_category = random_access_iterator_tag;
+      using difference_type = ZEN_NAMESPACE::mapped_iterator<IterT, F>::difference_type;
+      using value_type = ZEN_NAMESPACE::mapped_iterator<IterT, F>::value_type;
+      using pointer = ZEN_NAMESPACE::mapped_iterator<IterT, F>::pointer;
+      using reference = ZEN_NAMESPACE::mapped_iterator<IterT, F>::reference;
+      using iterator_category = ZEN_NAMESPACE::mapped_iterator<IterT, F>::iterator_category;
   };
+
 }
 

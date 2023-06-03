@@ -1,13 +1,12 @@
 
-export CLANG_INCLUDE_DIR ?= /usr/lib/clang/13.0.0/include
-export CLANG_LIBRARY_PATH ?= $(HOME)/Projects/llvm-project/install/usr/local/lib
+#export CLANG_INCLUDE_DIR ?= /usr/lib/clang/13.0.0/include
+#export CLANG_LIBRARY_PATH ?= $(HOME)/Projects/llvm-project/install/usr/local/lib
 
 ZEN_HEADERS = $(wildcard include/zen/*.hpp)
 ZEN_SOURCES = $(wildcard src/*.cc)
 ZEN_TEST_SOURCES = $(wildcard test/*.cc)
 
 all: build/alltests
-	ninja -C build alltests
 	./build/alltests
 
 build/alltests: build/build.ninja $(ZEN_HEADERS) $(ZEN_SOURCES) $(ZEN_TEST_SOURCES)

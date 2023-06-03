@@ -22,12 +22,99 @@ namespace meta {
   struct _8 {};
   struct _9 {};
 
+  template<std::size_t I>
+  using sz = std::integral_constant<std::size_t, I>;
+
+  using u0 = std::integral_constant<unsigned, 0>;
+  using u1 = std::integral_constant<unsigned, 1>;
+  using u2 = std::integral_constant<unsigned, 2>;
+  using u3 = std::integral_constant<unsigned, 3>;
+  using u4 = std::integral_constant<unsigned, 4>;
+  using u5 = std::integral_constant<unsigned, 5>;
+  using u6 = std::integral_constant<unsigned, 8>;
+  using u7 = std::integral_constant<unsigned, 7>;
+  using u8 = std::integral_constant<unsigned, 8>;
+  using u9 = std::integral_constant<unsigned, 9>;
+
+  template<typename T1, typename T2>
+  struct less;
+
+  template<typename I, I T1, I T2>
+  struct less<std::integral_constant<I, T1>, std::integral_constant<I, T2>> {
+    static constexpr const bool value = T1 < T2;
+  };
+
+  template<typename I, typename T>
+  struct get;
+
+  template<typename I, typename ...Ts>
+  struct get<I, std::tuple<Ts...>> {
+    using type = std::tuple_element_t<I::value, std::tuple<Ts...>>;
+  };
+
+  template<typename T1, typename T2>
+  struct get<u0, std::pair<T1, T2>> {
+    using type = T1;
+  };
+
+  template<typename T1, typename T2>
+  struct get<u1, std::pair<T1, T2>> {
+    using type = T2;
+  };
+
+  template<typename T>
+  struct head;
+
+  template<typename ...Ts>
+  struct head<std::tuple<Ts...>> {
+    using type = std::tuple_element_t<0, std::tuple<Ts...>>;
+  };
+
+  template<typename T1, typename T2>
+  struct head<std::pair<T1, T2>> {
+    using type = T1;
+  };
+
+  template<typename T>
+  using head_t = typename head<T>::type;
+
+  template<typename T>
+  struct rest;
+
+  template<typename T1, typename ...Ts>
+  struct rest<std::tuple<T1, Ts...>> {
+    using type = std::tuple<Ts...>;
+  };
+
+  template<typename T>
+  using rest_t = typename rest<T>::type;
+
+  template<typename T>
+  struct is_null;
+
+  template<>
+  struct is_null<std::tuple<>> : std::true_type {};
+
+  template<typename T1, typename ...Ts>
+  struct is_null<std::tuple<T1, Ts...>> : std::false_type {};
+
+  template<typename T>
+  using is_null_v = is_null<T>::value;
+
+  template<typename FnT, typename ...Ts>
+  struct apply {
+    using type = FnT::template apply<Ts...>;
+  };
+
+  template<typename FnT, typename ...Ts>
+  using apply_t = apply<FnT, Ts...>::type;
+
   template<typename T, typename F>
   struct map;
 
   template<typename ...Ts, typename F>
   struct map<std::tuple<Ts...>, F> {
-    using type = std::tuple<typename F::template apply<Ts>...>;
+    using type = std::tuple<apply_t<F, Ts>...>;
   };
 
   template<typename T, typename F>
@@ -230,6 +317,45 @@ namespace meta {
   template<typename FnT, typename T>
   constexpr const bool andmap_v = andmap<FnT, T>::value;
 
+  static_assert(is_null<std::tuple<>>::value);
+
+  template<typename FnT, typename T, typename InitT>
+  struct fold : std::conditional_t<is_null<T>::value, InitT, apply_t<FnT, head_t<T>, fold<FnT, rest_t<T>, InitT>>> {};
+
+  template<typename FnT, typename T, typename InitT>
+  using fold_t = typename fold<FnT, T, InitT>::type;
+
+  template<typename FnT, typename T>
+  struct fold1 : fold<FnT, rest_t<T>, head_t<T>> {};
+
+  template<typename FnT, typename T>
+  using fold1_t = typename fold1<FnT, T>::type;
+
+  template<typename I1, typename I2>
+  struct add;
+
+  template<typename I, I K, I L>
+  struct add<std::integral_constant<I, K>, std::integral_constant<I, L>> {
+    using type = std::integral_constant<I, K+L>;
+  };
+
+  template<typename I1, typename I2>
+  using add_t = add<I1, I2>::type;
+
+  template<typename FnT, typename ListT, typename InitT>
+  struct min_by : fold<lift<std::conditional_t<apply_t<FnT, _1>::type::value < apply_t<FnT, _2>::value, _1, _2>>, ListT, InitT> {};
+
+  template<typename FnT, typename ListT, typename InitT>
+  using min_by_t = typename min_by<FnT, ListT, InitT>::type;
+
+  template<typename ListT, typename NeedleT, std::size_t I = 0>
+  struct index {
+    using type = std::conditional_t<std::is_same<NeedleT, head_t<ListT>>::value, sz<I>, index<rest_t<ListT>, NeedleT, I + 1>>;
+  };
+
+  template<typename ListT, typename NeedleT, std::size_t I = 0>
+  using index_t = typename index<ListT, NeedleT, I>::type;
+
   template<typename T>
   struct is_pointer : std::false_type {};
 
@@ -292,6 +418,9 @@ namespace meta {
 
   template<typename T>
   static constexpr const bool is_container_v = is_container<T>::value;
+
+  template<typename T, typename U>
+  auto static_pointer_cast(U& ptr);
 
 }
 

@@ -4,7 +4,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "zen/iterator_adaptor.hpp"
 #include "zen/hash.hpp"
 
 ZEN_NAMESPACE_START
@@ -18,17 +17,7 @@ template<
   typename ReferenceT,
   typename BucketT
 >
-class hash_index_iterator 
-  : iterator_adaptor<
-      hash_index_iterator <
-        T,
-        KeyT,
-        ReferenceT,
-        BucketT
-      >,
-      T,
-      ReferenceT
-    > {
+class hash_index_iterator {
 
   BucketT& buckets;
   std::size_t bucket_index;
@@ -37,6 +26,8 @@ class hash_index_iterator
 public:
 
   using value_type = T;
+  using reference = ReferenceT;
+  using pointer = value_type*;
 
   inline hash_index_iterator(
     BucketT& buckets,
@@ -46,11 +37,11 @@ public:
      bucket_index(bucket_index),
      element_index(element_index) {}
 
-  value_type dereference() {
+  value_type operator*() {
     return buckets[bucket_index][element_index];
   }
 
-  void increment() {
+  void operator++() {
     for (;;) {
       if (bucket_index >= buckets.size()) {
         break;
@@ -66,7 +57,7 @@ public:
     }
   }
 
-  void decrement() {
+  void operator--() {
     for (;;) {
       if (element_index == 0) {
         --bucket_index;
