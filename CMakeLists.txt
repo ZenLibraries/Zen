@@ -74,11 +74,11 @@ if (ZEN_ENABLE_TESTS)
     test/either.cc
     test/mapped_iterator.cc
     test/zip_iterator.cc
-    test/program_options.cc
     test/meta.cc
     test/bytestring.cc
     test/filepath.cc
     test/json.cc
+    test/po.cc
     test/unicode.cc
   )
   target_link_libraries(alltests zen gtest gtest_main)
