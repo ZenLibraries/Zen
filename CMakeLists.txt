@@ -35,7 +35,6 @@ if (ZEN_ENABLE_TESTS)
 endif()
 
 set(zen_sources
-  src/program_options.cc
   src/json.cc
   src/filepath.cc
   src/unicode.cc
