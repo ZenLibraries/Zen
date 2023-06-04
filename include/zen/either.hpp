@@ -97,6 +97,7 @@
 #include <utility>
 
 #include "zen/config.hpp"
+#include "zen/formatting.hpp"
 
 ZEN_NAMESPACE_START
 
@@ -203,7 +204,14 @@ public:
 
   bool is_right() { return has_right_v; }
 
-  R unwrap() {
+  R unwrap() requires (has_display<L>) {
+    if (!has_right_v) {
+      ZEN_PANIC("error: %s", display(left_value).c_str());
+    }
+    return right_value;
+  }
+
+  R unwrap() requires (!has_display<L>) {
     if (!has_right_v) {
       ZEN_PANIC("trying to unwrap a zen::either which is left-valued");
     }
