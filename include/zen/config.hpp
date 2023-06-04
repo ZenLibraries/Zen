@@ -9,7 +9,7 @@
 
 #define ZEN_ASSERT(test)                                                                      \
   if (!(test)) {                                                                                \
-    ZEN_PANIC("An internal invariant failed to hold. See the stack trace for more details."); \
+    ZEN_PANIC("The invariant " #test " failed to hold. See the stack trace for more details."); \
   }
 
 #define ZEN_PANIC(message)                                            \
