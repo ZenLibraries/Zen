@@ -39,6 +39,7 @@ set(zen_sources
   src/filepath.cc
   src/unicode.cc
   src/msgpack.cc
+  src/po.cc
 )
 
 add_library(

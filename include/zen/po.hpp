@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <variant>
 #include <string>
 #include <optional>
@@ -9,7 +10,9 @@
 #include <any>
 #include <vector>
 #include <memory>
+#include <typeindex>
 
+#include "zen/clone_ptr.hpp"
 #include "zen/config.hpp"
 #include "zen/range.hpp"
 #include "zen/either.hpp"
@@ -21,6 +24,84 @@ namespace po {
   struct posarg {
     std::string _name;
     int _arity;
+  };
+
+  template<typename T>
+  class flag {
+
+    friend class command;
+
+    std::string name;
+    std::optional<std::string> description;
+    std::size_t min_count = 1;
+    std::size_t max_count = 1;
+
+  public:
+
+    flag(std::string name, std::optional<std::string> description = {}):
+      name(name), description(description) {}
+
+    flag& optional() {
+      min_count = 0;
+      return *this;
+    }
+
+    flag& required() {
+      min_count = std::max(static_cast<std::size_t>(1), min_count);
+      return *this;
+    }
+
+  };
+
+  struct unrecognised_flag_error {
+
+    std::string flag_name;
+
+    void display(std::ostream& out) const {
+      out << "the flag '" << flag_name << "' was not recognised by any of the (sub)commands.";
+    }
+
+  };
+
+  struct unsupported_type_error {
+
+    std::string flag_name;
+
+    void display(std::ostream& out) const {
+      out << "trying to store a flag value in a type that cannot be parsed."; 
+    }
+
+  };
+
+  struct flag_value_missing_error {
+
+    std::string flag_name;
+
+    void display(std::ostream& out) const {
+      out << "no value provided for flag '" << flag_name << "'.";
+    }
+
+  };
+
+  struct excess_positional_arg_error {
+
+    std::size_t i;
+    std::string arg;
+
+    void display(std::ostream& out) const {
+      out << "excess positional argument '" << arg << "' found.";
+    }
+
+  };
+
+  struct command_not_found_error {
+ 
+    std::string actual;
+
+    void display(std::ostream& out) const {
+      out << "the command '" << actual << "' was not found.";
+    }
+
   };
 
   struct invalid_argument_error {
@@ -51,7 +132,15 @@ namespace po {
 
   class error {
 
-    using storage_t = std::variant<invalid_argument_error, missing_pos_arg_error>;
+    using storage_t = std::variant<
+      invalid_argument_error,
+      missing_pos_arg_error,
+      command_not_found_error,
+      excess_positional_arg_error,
+      flag_value_missing_error,
+      unsupported_type_error,
+      unrecognised_flag_error
+    >;
 
     storage_t storage;
 
@@ -70,7 +159,27 @@ namespace po {
         case 1:
           std::get<1>(storage).display(out);
           break;
+        case 2:
+          std::get<2>(storage).display(out);
+          break;
+        case 3:
+          std::get<3>(storage).display(out);
+          break;
+        case 4:
+          std::get<4>(storage).display(out);
+          break;
+        case 5:
+          std::get<5>(storage).display(out);
+          break;
+        case 6:
+          std::get<6>(storage).display(out);
+          break;
       }
+    }
+
+    template<typename T>
+    bool is() const {
+      return std::holds_alternative<T>(storage);
     }
 
     template<typename T>
@@ -88,50 +197,89 @@ namespace po {
   template<typename T>
   using result = either<error, T>;
 
-  class parse_result {
+  class match {
 
     friend class program;
 
-    std::unordered_map<std::string, std::any> flags;
-    std::vector<std::string> pos_args;
+    std::unordered_map<std::string, std::any> _flags;
+    std::vector<std::string> _pos_args;
+    std::optional<std::tuple<std::string, clone_ptr<match>>> _subcommand = {};
 
     void add_flag(std::string name, std::any value) {
-      flags.emplace(name, value);
+      _flags.emplace(name, value);
     }
 
     void add_pos_arg(std::string arg) {
-      pos_args.push_back(arg);
+      _pos_args.push_back(arg);
     }
 
   public:
 
-    std::size_t count_flags() const {
-      return flags.size();
+    inline match():
+      _subcommand({}) {}
+
+    inline match(
+      std::unordered_map<std::string, std::any> _flags,
+      std::vector<std::string> _pos_args,
+      std::optional<std::tuple<std::string, clone_ptr<match>>> _subcommand
+    ): _flags(_flags), _pos_args(_pos_args), _subcommand(_subcommand) {}
+
+    match* clone() const {
+      return new match { _flags, _pos_args, _subcommand };
     }
 
-    std::optional<std::any> get_flag(const std::string& name) const {
-      auto match = flags.find(name);
-      if  (match == flags.end()) {
+    std::size_t count_flags() const {
+      return _flags.size();
+    }
+
+    bool has_flag(const std::string& name) const {
+      return _flags.count(name);
+    }
+
+    template<typename T>
+    std::optional<T> get_flag(const std::string& name) const {
+      auto match = _flags.find(name);
+      if  (match == _flags.end()) {
         return {};
       }
-      return match->second;
+      return std::any_cast<T>(match->second);
     }
 
     std::size_t count_pos_args() const {
-      return pos_args.size();
+      return _pos_args.size();
+    }
+
+    std::string get_pos_arg(std::size_t i) {
+      return _pos_args[i];
     }
 
     auto get_pos_args() const {
-      return make_iterator_range(pos_args.cbegin(), pos_args.cend());
+      return make_iterator_range(_pos_args.cbegin(), _pos_args.cend());
+    }
+
+    bool has_subcommand() const noexcept {
+      return _subcommand.has_value();
+    }
+
+    std::tuple<std::string, clone_ptr<match>>& subcommand() {
+      ZEN_ASSERT(_subcommand);
+      return *_subcommand;
     }
 
   };
 
-  using command_callback_t = std::function<int(const parse_result&)>;
+  using command_callback_t = std::function<int(const match&)>;
 
   static constexpr const int opt = -3;
   static constexpr const int some = -2;
   static constexpr const int many = -1;
+
+  struct _flag_info {
+    std::optional<std::string> description;
+    std::type_index type;
+    std::size_t min_count;
+    std::size_t max_count;
+  };
 
   class command {
 
@@ -141,6 +289,7 @@ namespace po {
 
     std::string _name;
     std::optional<std::string> _description;
+    std::unordered_map<std::string, _flag_info> _flags;
     std::vector<command> _subcommands;
     std::vector<posarg> _pos_args;
     bool _is_fallback = false;
@@ -153,6 +302,12 @@ namespace po {
 
     command& description(std::string description) {
       _description = description;
+      return *this;
+    }
+
+    template<typename T>
+    command& flag(flag<T> fl) {
+      _flags.emplace(fl.name, _flag_info { fl.description, typeid(T), fl.min_count, fl.max_count });
       return *this;
     }
 
@@ -212,94 +367,20 @@ namespace po {
       return *this;
     }
 
+    template<typename T>
+    program& flag(flag<T> fl) {
+      _command.flag(fl);
+      return *this;
+    }
+
     program& pos_arg(std::string name, int arity = 1) {
       _command.pos_arg(name, arity);
       return *this;
     }
 
-    result<parse_result> parse_args(int argc, const char** argv) {
+    result<match> parse_args(std::vector<std::string_view> argv);
 
-      int i = 0;
-      std::vector<command*> command_stack { &_command };
-      auto pos_arg_iter = command_stack.back()->_pos_args.begin();
-      parse_result res; // Will hold all flags and positional argumments.
-      int k = 0; // Counts the amount of positional arguments.
-
-#define BOLT_PUSH_CMD(cmd) \
-  if (pos_arg_iter != command_stack.back()->_pos_args.end()) { \
-    return left(missing_pos_arg_error(*pos_arg_iter)); \
-  } \
-  command_stack.push_back(&cmd); \
-  pos_arg_iter = cmd._pos_args.begin();
-
-      for (; i < argc;) {
-
-        std::string_view arg = argv[i++];
-
-        if (arg[0] == '\0') {
-
-          return left(invalid_argument_error(arg));
-
-        } else if (arg[0] == '-') {
-
-          //  TODO
-
-        } else {
-
-          // Match a command from the list of subcommands
-          bool processed_arg = false;
-          for (auto& cmd: command_stack.back()->_subcommands) {
-            if (cmd._name == arg) {
-              BOLT_PUSH_CMD(cmd);
-              processed_arg = true;
-            }
-          }
-
-          if (!processed_arg) {
-
-            // Add a fallback command if no command matched
-            for (;;) {
-              bool changed = false;
-              for (auto cmd: command_stack.back()->_subcommands) {
-                if (cmd._is_fallback) {
-                  BOLT_PUSH_CMD(cmd);
-                  changed = true;
-                  processed_arg = true;
-                  break;
-                }
-              }
-              if (!changed) {
-                break;
-              }
-            }
-
-            if (!processed_arg) {
-
-              // Process any positional arguments
-              if (pos_arg_iter == command_stack.back()->_pos_args.end()) {
-                ZEN_PANIC("excess positional arguments provided");
-              }
-              res.add_pos_arg(std::string(arg));
-              ++k;
-              if (k == pos_arg_iter->_arity) {
-                ++pos_arg_iter;
-                k = 0;
-              }
-
-            }
-
-          }
-
-        }
-
-      }
-
-      if (!command_stack.empty() && command_stack.back()->_callback) {
-        std::exit((*command_stack.back()->_callback)(res));
-      }
-
-      return right(res);
-    }
+    result<match> parse_args(int argc, const char** argv);
 
   };
 
