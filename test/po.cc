@@ -7,14 +7,15 @@ TEST(POTest, CanParseSubcommands) {
 
   const char* argv[] = { "/usr/bin/bolt", "test.bolt" };
 
-  zen::program("bolt", "The offical compiler for the Bolt programming language")
+  zen::po::program("bolt", "The offical compiler for the Bolt programming language")
     .subcommand(
-      zen::command("check", "Check sources for programming mistakes")
-        .pos_arg("FILE", zen::some)
+      zen::po::command("check", "Check sources for programming mistakes")
+        .pos_arg("FILE", zen::po::some)
         .fallback())
     .subcommand(
-      zen::command("eval", "Run sources")
-        .pos_arg("FILE", zen::some))
-    .parse_args(2, argv);
+      zen::po::command("eval", "Run sources")
+        .pos_arg("FILE", zen::po::some))
+    .parse_args(2, argv)
+    .unwrap();
 
 }
