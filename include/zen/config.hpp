@@ -12,8 +12,8 @@
     ZEN_PANIC("The invariant " #test " failed to hold. See the stack trace for more details."); \
   }
 
-#define ZEN_PANIC(message)                                            \
-  fprintf(stderr, __FILE__ ":" ZEN_CAT2(__LINE__) ": " message "\n"); \
+#define ZEN_PANIC(message, ...)                                            \
+  fprintf(stderr, __FILE__ ":" ZEN_CAT2(__LINE__) ": " message "\n" __VA_OPT__(,) __VA_ARGS__); \
   std::abort();
 
 #define ZEN_UNREACHABLE \
