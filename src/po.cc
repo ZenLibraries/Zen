@@ -72,7 +72,6 @@ namespace po {
           auto& cmd = **iter;
           auto match = cmd._flags.find(name);
           if (match == cmd._flags.end()) {
-            std::cerr << "next" << std::endl;
             continue;
           }
           auto& flag = match->second;
