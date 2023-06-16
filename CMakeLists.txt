@@ -78,6 +78,7 @@ if (ZEN_ENABLE_TESTS)
     test/bytestring.cc
     test/filepath.cc
     test/json.cc
+    test/alloc.cc
     test/po.cc
     test/unicode.cc
   )
