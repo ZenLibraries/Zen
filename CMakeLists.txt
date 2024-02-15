@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Zen CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
   set(is_debug_build ON)
 else()
@@ -31,7 +29,7 @@ endif()
 # This must be added before doing any other configuration so that
 # changing something local doesn't trigger a GoogleTest rebuild
 if (ZEN_ENABLE_TESTS)
-  add_subdirectory(subprojects/googletest-release-1.11.0 EXCLUDE_FROM_ALL)
+  add_subdirectory(subprojects/googletest-1.14.0 EXCLUDE_FROM_ALL)
 endif()
 
 set(zen_sources
@@ -58,6 +56,11 @@ target_include_directories(
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCDIR}>
+)
+target_compile_features(
+  zen
+  PUBLIC
+  cxx_std_20
 )
 
 install(
