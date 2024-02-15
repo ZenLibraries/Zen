@@ -21,5 +21,11 @@
 
 #define ZEN_AUTO_SIZE (-1)
 
+#if __cplusplus >= 201703L
+#define ZEN_NODISCARD [[nodiscard]]
+#else
+#define ZEN_NODISCARD
+#endif
+
 #endif // of #ifndef ZEN_CONFIG_HPP
 
