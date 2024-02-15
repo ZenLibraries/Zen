@@ -46,8 +46,11 @@ endif
 
 zen_lib = static_library(
   'zen',
-  'src/program_options.cc',
   'src/json.cc',
+  'src/filepath.cc',
+  'src/unicode.cc',
+  'src/msgpack.cc',
+  'src/po.cc',
   include_directories: 'include',
   cpp_args: zen_compile_args,
 )
@@ -61,10 +64,16 @@ zen_dep = declare_dependency(
 if zen_enable_tests
   executable(
     'alltests',
-    'test/iterator_adaptor.cc',
+    'test/either.cc',
+    'test/mapped_iterator.cc',
     'test/zip_iterator.cc',
-    'test/program_options.cc',
-    'test/json_encoder.cc',
+    'test/meta.cc',
+    'test/bytestring.cc',
+    'test/filepath.cc',
+    'test/json.cc',
+    'test/alloc.cc',
+    'test/po.cc',
+    'test/unicode.cc',
     include_directories: 'include',
     dependencies: [ gtest_dep, zen_dep ],
     build_by_default: false
