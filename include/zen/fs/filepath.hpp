@@ -76,4 +76,13 @@ namespace zen {
 
 }
 
+template<>
+struct std::hash<zen::fs::filepath>
+{
+    std::size_t operator()(const zen::fs::filepath& s) const noexcept
+    {
+        return std::hash<std::string>{}(s.as_std_string());
+    }
+};
+
 #endif // of #ifndef ZEN_FILEPATH_HPP
