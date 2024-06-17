@@ -266,13 +266,13 @@ public:
 
   either(either&& other): has_left(other.has_left) {
     if (other.has_left) {
-      left_value = std::move(other.data.left);
+      left_value = std::move(other.left_value);
     }
   }
 
   either(const either& other): has_left(other.has_left) {
     if (other.has_left) {
-      left_value = other.data.left;
+      left_value = other.left_value;
     }
   }
 
