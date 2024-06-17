@@ -38,7 +38,7 @@ json_parse_result parse_json(std::istream& in);
 json_parse_result parse_json(const std::string& in);
 
 struct json_encode_opts {
-  std::string indentation = "  ";
+  std::string indentation = "";
 };
 
 std::unique_ptr<transformer> make_json_decoder(
@@ -64,6 +64,15 @@ void decode_json(InputT input, T& value) {
 template<typename OutputT, typename T>
 void encode_json(OutputT output, T& value) {
   auto encoder = make_json_encoder(output);
+  decode(encoder, value);
+}
+
+template<typename OutputT, typename T>
+void encode_json_pretty(OutputT output, T& value) {
+  json_encode_opts opts = {
+    .indentation = "    ",
+  };
+  auto encoder = make_json_encoder(output, opts);
   decode(encoder, value);
 }
 
