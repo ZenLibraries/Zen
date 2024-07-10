@@ -84,6 +84,7 @@ if (ZEN_ENABLE_TESTS)
     test/alloc.cc
     test/po.cc
     test/unicode.cc
+    test/graph.cc
   )
   target_link_libraries(alltests zen gtest gtest_main)
   add_custom_target(check COMMAND alltests --gtest_color=yes COMMENT "Running tests")
