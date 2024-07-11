@@ -1,8 +1,10 @@
 #ifndef ZEN_ITERATOR_RANGE_HPP
 #define ZEN_ITERATOR_RANGE_HPP
 
+#include <iterator>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "zen/meta.hpp"
 #include "zen/mapped_iterator.hpp"
@@ -69,6 +71,22 @@ auto make_iterator_range(IterT&& a, IterT&& b) {
 template<typename IterT>
 auto make_iterator_range(std::pair<IterT, IterT>&& pair) {
   return iterator_range<IterT>(std::forward<IterT>(pair.first), std::forward<IterT>(pair.second));
+}
+
+template<typename T>
+concept RangeLike = requires (T a) {
+  { a.begin() } -> std::input_iterator;
+  { a.end() } -> std::input_iterator;
+  { a.cbegin() } -> std::input_iterator;
+  { a.cend() } -> std::input_iterator;
+};
+
+template<RangeLike T>
+auto make_iterator_range(const T& container) {
+  return make_iterator_range(
+    container.begin(),
+    container.end()
+  );
 }
 
 template<typename ...Ts>
