@@ -2,3 +2,4 @@
 /build/
 .cache/
 Makefile
+__pycache__/
