@@ -27,5 +27,7 @@
 #define ZEN_NODISCARD
 #endif
 
+#define ZEN_NOEXCEPT noexcept
+
 #endif // of #ifndef ZEN_CONFIG_HPP
 

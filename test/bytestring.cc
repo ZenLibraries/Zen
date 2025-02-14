@@ -4,7 +4,7 @@
 #include "zen/bytestring.hpp"
 #include "zen/meta.hpp"
 
-static_assert(zen::meta::is_range_v<const zen::basic_bytestring<>>);
+static_assert(zen::meta::is_range_v<const zen::bytestring>);
 static_assert(zen::meta::is_range_v<const zen::bytestring_view>);
 
 TEST(ByteStringTest, CanConstructFromStringLiteral) {
@@ -63,7 +63,7 @@ TEST(ByteStringTest, ReportsCorrectSize) {
 TEST(ByteStringView, CanCompareWithByteString) {
 
   zen::bytestring a { "foo" };
-  auto a_view = a.as_view();
+  zen::bytestring_view a_view = a;
   zen::bytestring b { "ba_viewr" };
   zen::bytestring c { "foo" };
   zen::bytestring d { "foob" };

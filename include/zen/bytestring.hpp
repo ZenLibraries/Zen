@@ -1,6 +1,7 @@
 #ifndef ZEN_BYTESTRING_HPP
 #define ZEN_BYTESTRING_HPP
 
+#include <cstdlib>
 #include <string.h>
 #include <stdlib.h>
 
@@ -45,15 +46,15 @@ public:
   const std::size_t sz;
 
   template<typename BS>
-  bytestring_view(const BS& data):
+  bytestring_view(const BS& data) ZEN_NOEXCEPT:
     ptr(data.ptr), sz(data.sz) {}
 
-  bool operator==(const char* other) const noexcept {
+  bool operator==(const char* other) const ZEN_NOEXCEPT {
     return string_equal_helper(ptr, other, sz);
   }
 
   template<std::size_t N>
-  bool operator==(const basic_bytestring<N>& other) const noexcept {
+  bool operator==(const basic_bytestring<N>& other) const ZEN_NOEXCEPT {
     if (sz != other.sz) {
       return false;
     }
@@ -67,36 +68,35 @@ public:
 
   // FIXME Implement this properly
   template<typename T>
-  bool operator!=(T other) const {
+  bool operator!=(const T& other) const ZEN_NOEXCEPT {
     return !(*this == other);
   }
 
-  const char& operator[](std::size_t index) const noexcept {
+  const char& operator[](std::size_t index) const ZEN_NOEXCEPT {
     return ptr[index];
   }
 
-
-  iterator begin() noexcept {
+  iterator begin() ZEN_NOEXCEPT {
     return ptr;
   }
 
-  iterator end() noexcept {
+  iterator end() ZEN_NOEXCEPT {
     return ptr + sz;
   }
 
-  const_iterator begin() const noexcept {
+  const_iterator begin() const ZEN_NOEXCEPT {
     return ptr;
   }
 
-  const_iterator end() const noexcept {
+  const_iterator end() const ZEN_NOEXCEPT {
     return ptr + sz;
   }
 
-  const_iterator cbegin() const noexcept {
+  const_iterator cbegin() const ZEN_NOEXCEPT {
     return ptr;
   }
 
-  const_iterator cend() const noexcept {
+  const_iterator cend() const ZEN_NOEXCEPT {
     return ptr + sz;
   }
 
@@ -115,7 +115,7 @@ class basic_bytestring {
   friend class bytestring_view;
 
   char* ptr;
-  std::size_t ptr_sz;
+  std::size_t max_sz;
   std::size_t sz;
 
 public:
@@ -127,82 +127,70 @@ public:
   using const_iterator = const char*;
   using view = bytestring_view;
 
-  basic_bytestring(const char* const other, std::size_t sz): sz(sz) {
-    ptr = static_cast<char*>(malloc(sz));
-    if (ptr == nullptr) {
-      ZEN_PANIC("insufficient memory");
+  basic_bytestring(std::size_t max_sz) ZEN_NOEXCEPT:
+    sz(0) {
+      ptr = static_cast<char*>(malloc(max_sz));
+      if (ptr == nullptr) {
+        ZEN_PANIC("insufficient memory");
+      }
+      max_sz = max_sz;
     }
-    memcpy(ptr, other, sz);
-    ptr_sz = sz;
-  }
 
-  basic_bytestring(const char* const other):
+  basic_bytestring() ZEN_NOEXCEPT:
+    basic_bytestring(N) {}
+
+  basic_bytestring(const char* const other, std::size_t other_sz) ZEN_NOEXCEPT:
+    basic_bytestring(other_sz) {
+      sz = other_sz;
+      memcpy(ptr, other, sz);
+    }
+
+  basic_bytestring(const char* const other) ZEN_NOEXCEPT:
     basic_bytestring(other, strlen(other)) {}
 
-  basic_bytestring():
-    sz(0) {
-      ptr = static_cast<char*>(malloc(N));
-      if (ptr == nullptr) {
-        ZEN_PANIC("insufficient memory");
-      }
-      ptr_sz = N;
-    }
+  basic_bytestring(const std::string& str) ZEN_NOEXCEPT:
+    basic_bytestring(str.c_str(), str.size()) {}
 
-  basic_bytestring(std::string str): ptr_sz(str.size()), sz(str.size()) {
-    ptr = static_cast<char*>(malloc(sz));
-    if (ptr == nullptr) {
-      ZEN_PANIC("insufficient memory");
-    }
-    memcpy(ptr, str.c_str(), sz);
-  }
+  basic_bytestring(const basic_bytestring& other) ZEN_NOEXCEPT:
+    basic_bytestring(other.ptr, other.sz) {}
 
-  basic_bytestring(const basic_bytestring& other):
-    ptr_sz(other.ptr_sz),
-    sz(other.sz) {
-      ptr = static_cast<char*>(malloc(other.ptr_sz));
-      if (ptr == nullptr) {
-        ZEN_PANIC("insufficient memory");
-      }
-      memcpy(ptr, other.ptr, sz);
-    }
-
-  basic_bytestring(basic_bytestring&& other):
+  basic_bytestring(basic_bytestring&& other) ZEN_NOEXCEPT:
     ptr(std::move(other.ptr)),
-    ptr_sz(std::move(other.ptr_sz)),
+    max_sz(std::move(other.max_sz)),
     sz(std::move(other.sz)) {
       other.ptr = nullptr;
     }
 
-  iterator begin() noexcept {
+  iterator begin() ZEN_NOEXCEPT {
     return ptr;
   }
 
-  iterator end() noexcept {
+  iterator end() ZEN_NOEXCEPT {
     return ptr + sz;
   }
 
-  const_iterator begin() const noexcept {
+  const_iterator begin() const ZEN_NOEXCEPT {
     return ptr;
   }
 
-  const_iterator end() const noexcept {
+  const_iterator end() const ZEN_NOEXCEPT {
     return ptr + sz;
   }
 
-  const_iterator cbegin() const noexcept {
+  const_iterator cbegin() const ZEN_NOEXCEPT {
     return ptr;
   }
 
-  const_iterator cend() const noexcept {
+  const_iterator cend() const ZEN_NOEXCEPT {
     return ptr + sz;
   }
 
-  bool operator==(const char* other) const noexcept {
+  bool operator==(const char* other) const ZEN_NOEXCEPT {
     return string_equal_helper(ptr, other, sz);
   }
 
   template<std::size_t N2>
-  bool operator==(const basic_bytestring<N2>& other) const noexcept {
+  bool operator==(const basic_bytestring<N2>& other) const ZEN_NOEXCEPT {
     if (sz != other.sz) {
       return false;
     }
@@ -214,37 +202,45 @@ public:
     return true;
   }
 
-  char& operator[](std::size_t index) noexcept {
+  char& operator[](std::size_t index) ZEN_NOEXCEPT {
     return ptr[index];
   }
 
-  const char& operator[](std::size_t index) const noexcept {
+  const char& operator[](std::size_t index) const ZEN_NOEXCEPT {
     return ptr[index];
   }
 
-  bytestring_view as_view() const noexcept {
+  bytestring_view as_view() const ZEN_NOEXCEPT {
     return bytestring_view(*this);
   }
 
-  std::size_t size() const noexcept {
+  std::size_t capacity() const ZEN_NOEXCEPT {
+    return max_sz;
+  }
+
+  std::size_t size() const ZEN_NOEXCEPT {
     return sz;
   }
 
-  const char* as_cstr() const {
+  const char* c_str() const ZEN_NOEXCEPT {
     return ptr;
   }
 
-  std::string as_std_string() const {
+  char* data() const ZEN_NOEXCEPT {
+    return ptr;
+  }
+
+  std::string to_std_string() const ZEN_NOEXCEPT {
     return std::string(ptr, sz);
   }
 
-  void resize(std::size_t new_sz) {
+  void resize(std::size_t new_sz) ZEN_NOEXCEPT{
     ZEN_ASSERT(new_sz <= sz);
     sz = new_sz;
     ptr[new_sz] = '\0';
   }
 
-  ~basic_bytestring() {
+  ~basic_bytestring() ZEN_NOEXCEPT {
     if (ptr != nullptr) {
       free(ptr);
     }
@@ -253,13 +249,31 @@ public:
 };
 
 template<std::size_t N>
-std::ostream& operator<<(std::ostream& out, const basic_bytestring<N>& bs) {
-  out << bs.as_cstr();
+std::ostream& operator<<(std::ostream& out, const basic_bytestring<N>& bs) ZEN_NOEXCEPT {
+  out << bs.c_str();
   return out;
 }
 
 using bytestring = basic_bytestring<>;
 
 ZEN_NAMESPACE_END
+
+namespace std {
+
+  template<std::size_t N>
+  struct hash<zen::basic_bytestring<N>> {
+
+    std::size_t operator()(const zen::basic_bytestring<N> str) const noexcept {
+      std::size_t h = 17;
+      for (auto ch: str) {
+        h = h * 19 + ch;
+      }
+      return h;
+    }
+
+  };
+
+}
+
 
 #endif // #infdef ZEN_BYTESTRING_HPP

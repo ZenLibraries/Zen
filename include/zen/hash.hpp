@@ -1,5 +1,6 @@
 
 #include <functional>
+#include <string>
 
 namespace std {
 

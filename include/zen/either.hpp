@@ -200,9 +200,13 @@ public:
     return right_value;
   }
 
-  bool is_left() { return !has_right_v; }
+  bool is_left() const { return !has_right_v; }
 
-  bool is_right() { return has_right_v; }
+  bool is_right() const { return has_right_v; }
+
+  operator bool() const {
+    return is_right();
+  }
 
   R unwrap() requires (has_display<L>) {
     if (!has_right_v) {
